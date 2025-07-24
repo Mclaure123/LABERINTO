@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Laberinto de Datos (Perfección v16.2 - Estable)</title>
+    <title>Laberinto de Datos (Perfección v29.4 - Apagado)</title>
     <style>
-        /* CSS - Arquitectura de la Perfección v16.2 */
+        /* CSS - Arquitectura de la Perfección v29.4 */
         :root {
             --key-size: clamp(35px, 5.5vw, 55px);
             --key-gap: clamp(4px, 1vw, 8px);
@@ -13,58 +13,70 @@
             --color-wall: #1B263B; --color-path: #415A77; --color-player: #FF477E; --color-player-rgb: 255, 71, 126;
             --color-letter: #FFD166; --color-exit: #3A86FF;
             --color-cli-text: #06D6A0; --color-danger-accent: #EF476F; --color-success-accent: #06D6A0;
-            --color-spacebar: #2a9d8f; --color-spacebar-hover: #268d80;
+            --color-mastery-star: #FFEB3B; --color-mastery-glow: rgba(255, 235, 59, 0.7);
             --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             --font-cli: 'Courier New', Courier, monospace;
             --transition-speed-fast: 0.1s;
             --transition-speed-normal: 0.3s;
             --animation-duration-collect: 0.6s;
+            --trail-duration: 1s;
         }
-
-        /* --- CORE RESET & LAYOUT --- */
+        
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--color-background); color: var(--color-text); font-family: var(--font-main); transition: background-color var(--transition-speed-normal), color var(--transition-speed-normal); }
         .screen { width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2rem; padding: 1rem; opacity: 1; visibility: visible; transition: opacity var(--transition-speed-normal) ease-in-out, visibility var(--transition-speed-normal); }
         .hidden { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
         .transition-zoom { animation: zoom-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes zoom-in { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        /* --- OVERLAYS --- */
         #impact-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 250; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
         #impact-overlay.active-1 { box-shadow: inset 0 0 100px 50px rgba(var(--color-player-rgb), 0.4); animation: impact-flash 0.3s ease-out; }
         #impact-overlay.active-2 { box-shadow: inset 0 0 120px 60px rgba(var(--color-player-rgb), 0.6); animation: impact-flash 0.5s ease-out; }
         @keyframes impact-flash { from { opacity: 1; } to { opacity: 0; } }
-        
+        #countdown-overlay, #pause-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; background-color: rgba(13, 27, 42, 0.7); backdrop-filter: blur(5px); }
         #countdown-overlay { z-index: 251; }
         #pause-overlay { z-index: 150; }
-        #countdown-overlay, #pause-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; background-color: rgba(13, 27, 42, 0.7); backdrop-filter: blur(5px); }
+        #shutdown-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background-color:#000; opacity:0; pointer-events:none; transition: opacity 0.3s ease-in; z-index:9999; }
+        #shutdown-overlay.active { opacity:1; }
         #countdown-number { font-size: 15rem; color: var(--color-text); font-weight: bold; text-shadow: 0 0 30px #000; animation: countdown-pop 1s linear; }
         @keyframes countdown-pop { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         #pause-menu { display: flex; flex-direction: column; gap: 1.5rem; align-items: center; }
-
-        /* --- SPECIFIC SCREENS --- */
-        #preloader-screen { background-color: #000; align-items: flex-start; justify-content: flex-start; }
-        #map-screen, #level-map-screen, #highscore-screen { justify-content: flex-start; padding-top: 3rem; gap: 1rem; }
-        #game-screen { justify-content: flex-start; padding-top: 0; }
+        #preloader-screen { background-color: #000; justify-content: center; align-items: center; gap: 3rem; }
+        #preloader-visual { width: 100px; height: 100px; color: var(--color-cli-text); animation: preloader-pulse 3s infinite ease-in-out; }
+        @keyframes preloader-pulse { 0%, 100% { transform: scale(1); opacity: 0.8; filter: drop-shadow(0 0 5px var(--color-cli-text)); } 50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 15px var(--color-cli-text)); } }
+        #profile-selector-screen, #map-screen, #level-map-screen, #highscore-screen { justify-content: flex-start; padding-top: 3rem; gap: 1rem; }
+        #game-screen { justify-content: flex-start; padding-top: 0; position: relative; }
         #phase-transition-screen, #results-screen { background-color: rgba(0,0,0,0.7); z-index: 200; }
-        
-        /* --- HIGH SCORE SCREEN --- */
+        #profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 95%; max-width: 1000px; padding: 1rem; }
+        .profile-card, .new-profile-card { aspect-ratio: 16 / 9; cursor: pointer; border-radius: 12px; background-color: var(--color-surface); box-shadow: 0 5px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: space-between; padding: 1.2rem; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
+        .profile-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(58, 134, 255, 0.4); }
+        .delete-profile-button { position: absolute; top: 0px; right: 5px; font-size: 2.2rem; color: var(--color-text); opacity: 0; transition: opacity 0.3s, color 0.3s; z-index: 10; padding: 0 0.5rem; line-height: 1; cursor: pointer; }
+        .delete-profile-button:hover { color: var(--color-danger-accent); }
+        .profile-card:hover .delete-profile-button { opacity: 0.7; }
+        .profile-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .profile-name { font-size: 1.8rem; font-weight: bold; }
+        .profile-world-icon svg { width: 48px; height: 48px; fill: var(--color-text); opacity: 0.7; }
+        .profile-progress { font-size: 1.1rem; opacity: 0.8; font-family: var(--font-cli); }
+        .new-profile-card { align-items: center; justify-content: center; border: 3px dashed var(--color-primary-accent); background-color: transparent; }
+        .new-profile-card:hover { background-color: rgba(58, 134, 255, 0.1); border-style: solid; }
+        .new-profile-text { font-size: 2rem; font-weight: bold; color: var(--color-primary-accent); }
+        .new-profile-text span { font-size: 3rem; display: block; line-height: 1; margin-bottom: 0.5rem; }
+        #profile-selector-actions { margin-top: 2rem; }
         #highscore-container { display: flex; flex-direction: column; gap: 0.5rem; width: 90%; max-width: 600px; background-color: var(--color-surface); padding: 1rem 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .score-row { display: flex; justify-content: space-between; font-size: 1.2rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(224, 225, 221, 0.2); font-family: var(--font-cli); }
         .score-row:last-child { border-bottom: none; }
         .score-rank { font-weight: bold; color: var(--color-primary-accent); }
         .score-name { flex-grow: 1; padding-left: 1.5rem; }
         .score-value { font-weight: bold; }
-        #highscore-back-button { margin-top: 2rem; }
-
-        /* --- RESULTS SCREEN --- */
+        #highscore-back-button, #map-change-operative-button { margin-top: 2rem; }
         #results-container { text-align: center; font-family: var(--font-cli); background-color: var(--color-surface); padding: 2rem 3rem; border-radius: 15px; }
         .results-line { font-size: 1.5rem; margin-bottom: 1rem; }
         #results-score { font-size: 3rem; color: var(--color-success-accent); font-weight: bold; margin: 1rem 0; }
-
-        /* --- MAP SCREENS --- */
         #world-map-container { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2rem; padding: 1rem; }
-        #map-actions { position: absolute; top: 1rem; right: 1rem; }
+        #map-actions { position: absolute; top: 1rem; right: 1rem; display: flex; gap: 1rem; }
+        #shutdown-button { position: fixed; bottom: 1rem; right: 1rem; width: 44px; height: 44px; cursor: pointer; opacity: 0.3; transition: opacity 0.3s, transform 0.3s; z-index: 101; }
+        #shutdown-button:hover { opacity: 1; transform: scale(1.1); }
+        #shutdown-button svg { width: 100%; height: 100%; fill: var(--color-text); transition: fill 0.3s; }
+        #shutdown-button:hover svg { fill: var(--color-danger-accent); }
         .world-icon { cursor: pointer; text-align: center; width: 150px; transition: transform 0.3s, opacity 0.3s; position: relative; }
         .world-icon svg { width: 100px; height: 100px; transition: all 0.3s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
         .world-icon .world-name { font-weight: bold; margin-top: 0.5rem; transition: color 0.3s; }
@@ -73,13 +85,14 @@
         .world-icon:not(.locked):hover { transform: scale(1.1); }
         .world-icon.current { animation: pulse-current-world 2s infinite; }
         @keyframes pulse-current-world { 0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); } 50% { transform: scale(1.05); filter: drop-shadow(0 6px 15px var(--color-primary-accent)); } }
-        .world-icon .completion-badge { position: absolute; top: -5px; right: 20px; width: 30px; height: 30px; fill: gold; opacity: 0; transform: scale(0) rotate(-45deg); transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .world-icon.completed .completion-badge { opacity: 1; transform: scale(1) rotate(0deg); }
+        .world-icon .completion-badge { position: absolute; top: -5px; right: 15px; width: 32px; height: 32px; background-color: var(--color-background); border: 2px solid var(--color-mastery-star); border-radius: 50%; display: flex; justify-content: center; align-items: center; opacity: 0; transform: scale(0) rotate(-45deg); transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .world-icon.completed .completion-badge { opacity: 1; transform: scale(1) rotate(0deg); animation: pulse-mastery 2.5s infinite ease-in-out; }
+        .world-icon .completion-badge svg { width: 70%; height: 70%; fill: var(--color-mastery-star); filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+        @keyframes pulse-mastery { 0%, 100% { transform: scale(1); box-shadow: 0 0 4px 1px var(--color-mastery-glow); } 50% { transform: scale(1.05); box-shadow: 0 0 12px 4px var(--color-mastery-glow); } }
         .world-level-pips { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
         .level-pip { width: 10px; height: 10px; background-color: #333; border-radius: 50%; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); transition: all 0.3s; }
         .level-pip.completed { background-color: var(--color-success-accent); }
         .level-pip.unlocked { background-color: var(--color-primary-accent); }
-        
         #level-map-header { text-align: center; margin-bottom: 2rem; }
         #level-map-container { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; width: 90%; max-width: 600px; }
         .level-node { cursor: pointer; background-color: var(--color-surface); width: 100%; padding: 1rem 1.5rem; border-radius: 10px; border-left: 5px solid var(--color-primary-accent); display: flex; flex-direction: column; align-items: flex-start; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -91,8 +104,6 @@
         .progress-dot { width: 12px; height: 12px; background-color: #444; border-radius: 50%; transition: background-color 0.3s; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
         .progress-dot.completed { background-color: var(--color-success-accent); }
         #level-map-back-button { position: absolute; top: 1rem; left: 1rem; font-size: 1rem; padding: 0.5rem 1rem; }
-
-        /* --- CHALLENGE SCREEN --- */
         #challenge-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; width: 100%; }
         #challenge-display-wrapper { position: relative; width: 90%; max-width: 800px; }
         #challenge-display, #challenge-blueprint { min-height: 80px; width: 100%; display: flex; justify-content: center; align-items: center; font-size: clamp(1.5rem, 6vw, 3rem); letter-spacing: 0.5rem; padding: 0 1rem; font-family: var(--font-cli); border-radius: 10px; }
@@ -101,18 +112,18 @@
         #challenge-blueprint.visible { opacity: 1; animation: fade-out-blueprint 1s forwards; }
         @keyframes fade-out-blueprint { from { opacity: 1; } to { opacity: 0; } }
         #memory-pulse-button { margin-top: 1rem; font-size: 1rem; padding: 0.5rem 1rem; background-color: var(--color-surface); }
-        
-        /* ... Other styles remain unchanged ... */
         .title { font-size: clamp(2.5rem, 10vw, 5rem); text-shadow: 0 0 15px rgba(255, 255, 255, 0.3); text-align: center; }
         .prompt { font-size: clamp(1.2rem, 4vw, 2rem); text-align: center; }
         .button { padding: 1rem 2.5rem; font-size: clamp(1.2rem, 5vw, 1.8rem); background-color: var(--color-primary-accent); color: var(--color-text); border: none; border-radius: 10px; cursor: pointer; transition: transform var(--transition-speed-normal), box-shadow var(--transition-speed-normal), background-color var(--transition-speed-normal); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); }
         .button:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6); }
         .button:active { transform: translateY(0); }
         #reset-button { font-size: clamp(0.8rem, 2vw, 1rem); padding: 0.5rem 1rem; background-color: var(--color-danger-accent); position: absolute; bottom: 2rem; }
-        #cli-output { padding: 1rem; font-family: var(--font-cli); color: var(--color-cli-text); font-size: clamp(0.8rem, 2.5vw, 1.2rem); white-space: pre-wrap; line-height: 1.5; }
+        #cli-output { width: 90%; max-width: 600px; padding: 1rem; font-family: var(--font-cli); color: var(--color-cli-text); font-size: clamp(0.8rem, 2.5vw, 1.2rem); white-space: pre-wrap; line-height: 1.5; text-align: left; }
         .cursor { display: inline-block; width: 0.7em; height: 1.2em; background-color: var(--color-cli-text); animation: blink 1s step-end infinite; vertical-align: bottom; }
         @keyframes blink { 50% { background-color: transparent; } }
         #name-display-container { display: flex; justify-content: center; align-items: center; gap: clamp(4px, 1vw, 8px); min-height: 80px; width: 90%; max-width: 800px; padding: 0 1rem; }
+        .name-display-container.error { animation: name-error-shake 0.5s; }
+        @keyframes name-error-shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
         .name-char-cell { width: clamp(30px, 5vw, 50px); height: clamp(45px, 7.5vw, 75px); background-color: rgba(0,0,0,0.3); border: 2px solid var(--color-surface); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-family: var(--font-cli); font-size: clamp(1.5rem, 6vw, 2.5rem); transition: border-color 0.2s, transform 0.2s, background-color 0.2s; transform: scale(0.95); opacity: 0.7; }
         .name-char-cell.filled { transform: scale(1); opacity: 1; }
         .name-char-cell.cursor { animation: name-cursor-blink 1.2s infinite; border-color: var(--color-primary-accent); }
@@ -124,10 +135,8 @@
         .key.disabled { opacity: 0.3; pointer-events: none; background-color: #333; box-shadow: none; }
         .key[data-key="SHIFT"] { flex-grow: 1.5; }
         .key[data-key="SHIFT"].active { background-color: var(--color-primary-accent); box-shadow: 0 0 10px var(--color-primary-accent), 0 3px 1px rgba(0,0,0,0.3); }
-        .key[data-key="SPACE"] { background-color: var(--color-spacebar); flex-grow: 4; }
-        .key[data-key="SPACE"]:hover { background-color: var(--color-spacebar-hover); }
-        .key[data-key="BACKSPACE"] { flex-grow: 1.5; }
-        .key[data-key="ACEPTAR"], .key[data-key="ENTER"] { background-color: var(--color-success-accent); color: #fff; flex-grow: 2; }
+        .key[data-key="BACKSPACE"] { flex-grow: 2; }
+        .key[data-key="ACEPTAR"], .key[data-key="ENTER"] { background-color: var(--color-success-accent); color: #fff; flex-grow: 2.5; }
         #game-ui { flex-shrink: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; gap: 0.5rem; }
         #visual-hud-container { display: flex; align-items: center; gap: 0.8rem; flex-grow: 1; min-width: 0; }
         #hud-world-icon svg { width: clamp(1.8rem, 4vw, 2.2rem); height: clamp(1.8rem, 4vw, 2.2rem); fill: var(--color-text); }
@@ -137,19 +146,24 @@
         #word-display-container span.collected { opacity: 1; color: var(--color-letter); }
         #word-display-container span.target { opacity: 1; animation: target-word-pulse 1.5s infinite; }
         @keyframes target-word-pulse { 0%, 100% { text-shadow: 0 0 5px var(--color-text); } 50% { text-shadow: 0 0 20px var(--color-text); } }
-        #d-pad-toggle { width: 44px; height: 44px; background-color: rgba(255,255,255,0.1); border-radius: 50%; cursor: pointer; padding: 8px; transition: background-color 0.2s; }
-        #d-pad-toggle:hover { background-color: rgba(255,255,255,0.2); }
-        #d-pad-toggle.active { background-color: var(--color-primary-accent); }
-        #d-pad-toggle svg { width: 100%; height: 100%; fill: var(--color-text); }
-        #pause-button { position: absolute; top: 1rem; left: 1rem; width: 44px; height: 44px; z-index: 101; cursor: pointer; padding: 8px; }
-        #pause-button svg { width:100%; height:100%; fill: var(--color-text); }
-        #maze-wrapper { flex-grow: 1; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; }
+        #game-ui-right-controls { display: flex; align-items: center; gap: 0.5rem; }
+        .ui-control-button { width: 44px; height: 44px; background-color: rgba(255,255,255,0.1); border-radius: 50%; cursor: pointer; padding: 8px; transition: background-color 0.2s; }
+        .ui-control-button:hover { background-color: rgba(255,255,255,0.2); }
+        .ui-control-button.active { background-color: var(--color-primary-accent); }
+        .ui-control-button svg { width: 100%; height: 100%; fill: var(--color-text); }
+        #maze-wrapper { flex-grow: 1; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; transition: filter 0.5s ease-out; }
         #maze-container, #entity-container { display: grid; border: 2px solid var(--color-primary-accent); box-shadow: 0 0 20px rgba(58, 134, 255, 0.5); }
         #entity-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-color: transparent; box-shadow: none; pointer-events: none; }
-        .maze-cell { background-color: var(--color-path); }
+        .maze-cell { background-color: var(--color-path); position: relative; }
         .wall { background-color: var(--color-wall); box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
-        #player, .letter, #exit-door { align-self: center; justify-self: center; transition: grid-row-start var(--transition-speed-fast) ease-out, grid-column-start var(--transition-speed-fast) ease-out; }
+        .firewall-block { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--color-danger-accent); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s; background-image: linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%), linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%); background-size: 10px 10px; background-position: 0 0, 5px 5px; animation: firewall-pulse 1s infinite alternate; }
+        .firewall-block.closed { opacity: 1; transform: scale(1); }
+        @keyframes firewall-pulse { from { box-shadow: inset 0 0 8px 2px #000; } to { box-shadow: inset 0 0 15px 5px #000; } }
+        #player, .letter, #exit-door, .trail-particle { align-self: center; justify-self: center; }
+        #player, .letter, #exit-door { transition: grid-row-start var(--transition-speed-fast) ease-out, grid-column-start var(--transition-speed-fast) ease-out; }
         #player { background-color: var(--color-player); z-index: 10; pointer-events: auto; border-radius: 8px; animation: player-pulse 2s infinite ease-in-out; }
+        .trail-particle { background-color: var(--color-player); z-index: 9; border-radius: 50%; animation: fade-out-trail var(--trail-duration) ease-out forwards; }
+        @keyframes fade-out-trail { from { transform: scale(1); opacity: 0.6; } to { transform: scale(0); opacity: 0; } }
         .impact-shake-1 { animation: impact-shake 0.2s ease-out; }
         .impact-shake-2 { animation: impact-shake 0.4s ease-out 2; }
         @keyframes player-pulse { 0% { transform: scale(1); box-shadow: 0 0 10px 0px var(--color-player); } 50% { transform: scale(1.1); box-shadow: 0 0 25px 10px rgba(var(--color-player-rgb), 0.7); } 100% { transform: scale(1); box-shadow: 0 0 10px 0px var(--color-player); } }
@@ -172,549 +186,140 @@
         #d-pad-down { --area: down; } #d-pad-down::before { border-top-color: var(--color-text); }
         #d-pad-left { --area: left; } #d-pad-left::before { border-right-color: var(--color-text); }
         #d-pad-right { --area: right; } #d-pad-right::before { border-left-color: var(--color-text); }
+        #corruption-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 120; opacity: 0; transition: opacity 0.5s; }
+        #corruption-overlay.corruption-level-1 { opacity: 1; animation: mild-corruption 0.3s ease-out; }
+        #corruption-overlay.corruption-level-2 { opacity: 1; animation: moderate-corruption 0.5s ease-out; }
+        #corruption-overlay.corruption-level-3 { opacity: 1; animation: severe-corruption 3s linear; }
+        #corruption-overlay.corruption-level-2::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18,18,18,0) 50%, rgba(0,0,0,0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.02), rgba(0,0,255,0.03)); background-size: 100% 4px, 100% 100%; animation: scanlines 0.2s linear infinite; }
+        #corruption-overlay.corruption-level-3::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18,18,18,0) 50%, rgba(0,0,0,0.4) 50%), linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.04), rgba(0,0,255,0.06)); background-size: 100% 3px, 100% 100%; animation: scanlines 0.1s linear infinite, glitch 1s linear infinite; }
+        @keyframes scanlines { to { background-position: 0 100%; } }
+        @keyframes mild-corruption { from, to { filter: saturate(0.8) contrast(1.1); } 50% { filter: saturate(1) contrast(1); } }
+        @keyframes moderate-corruption { from, to { filter: saturate(0.6) contrast(1.2); } 50% { filter: saturate(0.8) contrast(1); } }
+        @keyframes severe-corruption { 0% { filter: saturate(0) contrast(1.5); } 100% { filter: saturate(0) contrast(1.5); } 20%, 24%, 55%, 59%, 94%, 99% { filter: saturate(0.2) contrast(1.0); } }
+        @keyframes glitch { 0%, 9%, 11%, 100% { clip-path: inset(0); } 10% { clip-path: inset(5% 20% 60% 5%); } 60% { clip-path: inset(40% 5% 30% 10%); } 95% { clip-path: inset(80% 30% 5% 5%); } }
     </style>
 </head>
 <body>
-    <!-- Overlays and Screens -->
-    <div id="impact-overlay"></div>
-    <div id="countdown-overlay" class="hidden"><span id="countdown-number"></span></div>
-    <div id="pause-overlay" class="hidden">
-        <div id="pause-menu" class="transition-zoom">
-            <h1 class="title">Pausa</h1>
-            <button id="resume-button" class="button">Continuar</button>
-            <button id="exit-to-map-button" class="button">Salir al Atlas</button>
-        </div>
-    </div>
-    
-    <div id="preloader-screen" class="screen"><div id="cli-output"></div></div>
-    <div id="welcome-screen" class="screen hidden">
-        <h1 class="title">Laberinto de Datos</h1>
-        <button id="enter-button" class="button">Ingresar</button>
-        <button id="reset-button" class="button">Resetear Progreso</button>
-    </div>
-    <div id="name-screen" class="screen hidden"><p class="prompt">Escribe tu nombre (máx. 12)</p><div id="name-display-container"></div><div id="name-keyboard-container" class="virtual-keyboard"></div></div>
-    
-    <div id="map-screen" class="screen hidden">
-        <h1 class="title">Atlas del Sistema</h1>
-        <div id="map-actions">
-            <button id="highscore-button" class="button" style="font-size: 1rem; padding: 0.5rem 1rem;">Top 10</button>
-        </div>
-        <div id="world-map-container"></div>
-    </div>
-    
-    <div id="level-map-screen" class="screen hidden">
-        <h1 id="level-map-header" class="title"></h1>
-        <div id="level-map-container"></div>
-        <button id="level-map-back-button" class="button">Volver al Atlas</button>
-    </div>
-
-    <div id="highscore-screen" class="screen hidden">
-        <h1 class="title">Panteón de Programadores</h1>
-        <div id="highscore-container"></div>
-        <button id="highscore-back-button" class="button">Volver al Atlas</button>
-    </div>
-
-    <div id="game-screen" class="screen hidden">
-        <div id="pause-button">
-            <svg viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>
-        </div>
-        <div id="game-ui">
-            <div id="visual-hud-container">
-                <div id="hud-world-icon"></div>
-                <div id="hud-text-info"></div>
-            </div>
-            <div id="word-display-container"></div>
-            <div id="d-pad-toggle" title="Mostrar/Ocultar Controles">
-                <svg viewBox="0 0 24 24"><path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V12H16.5A4.5,4.5 0 0,0 12,7.5A4.5,4.5 0 0,0 7.5,12H2V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M6,8V10H4V8H6M10,8V10H8V8H10M13,9.5A1.5,1.5 0 0,1 11.5,11A1.5,1.5 0 0,1 10,9.5A1.5,1.5 0 0,1 11.5,8A1.5,1.5 0 0,1 13,9.5M19.5,12A1.5,1.5 0 0,1 18,13.5A1.5,1.5 0 0,1 16.5,12A1.5,1.5 0 0,1 18,10.5A1.5,1.5 0 0,1 19.5,12M18,15H20V17H18V15M16,17H14V19H16V17M12,17H10V19H12V17M8,17H6V19H8V17Z" /></svg>
-            </div>
-        </div>
-        <div id="maze-wrapper"></div>
-        <div id="d-pad-container" class="hidden">
-            <div id="d-pad-up" class="d-pad-button"></div><div id="d-pad-left" class="d-pad-button"></div>
-            <div id="d-pad-right" class="d-pad-button"></div><div id="d-pad-down" class="d-pad-button"></div>
-        </div>
-    </div>
-    <div id="challenge-screen" class="screen hidden">
-        <div id="challenge-container">
-            <p class="prompt">Forma la palabra</p>
-            <div id="challenge-display-wrapper">
-                <div id="challenge-blueprint"></div>
-                <div id="challenge-display"></div>
-            </div>
-            <button id="memory-pulse-button" class="button">Pulso de Memoria (-500 pts)</button>
-        </div>
-        <div id="challenge-keyboard-container" class="virtual-keyboard"></div>
-    </div>
-    
-    <div id="results-screen" class="screen hidden">
-        <div id="results-container">
-            <h1 class="title">Resultados del Nivel</h1>
-            <div id="results-time" class="results-line"></div>
-            <div id="results-impacts" class="results-line"></div>
-            <div id="results-pulses" class="results-line"></div>
-            <div id="results-score" class="results-line"></div>
-            <button id="results-continue-button" class="button">Continuar</button>
-        </div>
-    </div>
-
-    <div id="victory-screen" class="screen hidden"><h1 class="title">¡NIVEL SUPERADO!</h1><button id="next-level-button" class="button">Volver al Atlas</button></div>
-    <div id="phase-transition-screen" class="screen hidden"><h1 class="title"></h1></div>
+    <div id="shutdown-overlay"></div>
+    <div id="impact-overlay"></div><div id="countdown-overlay" class="hidden"><span id="countdown-number"></span></div><div id="pause-overlay" class="hidden"><div id="pause-menu" class="transition-zoom"><h1 class="title">Pausa</h1><button id="resume-button" class="button">Continuar</button><button id="exit-to-map-button" class="button">Cambiar Operativo</button></div></div><div id="preloader-screen" class="screen"><div id="preloader-visual"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11,13.5V6H9V8H7V10H9V12H7V14H9V16H11V18H13V16H15V14H13V12H15V10H13V8H11V6A2,2 0 0,0 9,4H7A2,2 0 0,0 5,6V10A2,2 0 0,0 7,12V14A2,2 0 0,0 5,16V18A2,2 0 0,0 7,20H11V18H9A2,2 0 0,1 7,16H7A2,2 0 0,1 9,14V13.5H11M15,4H17A2,2 0 0,1 19,6V18A2,2 0 0,1 17,20H15V18H17V6H15V4Z"/></svg></div><div id="cli-output"></div></div><div id="welcome-screen" class="screen hidden"><h1 class="title">Laberinto de Datos</h1><button id="enter-button" class="button">Ingresar</button><button id="reset-button" class="button">Borrar Datos</button></div><div id="profile-selector-screen" class="screen hidden"><h1 class="title">Seleccionar Operativo</h1><div id="profile-grid"></div></div><div id="name-screen" class="screen hidden"><p class="prompt">Nombre del Nuevo Operativo (máx. 12)</p><div id="name-display-container"></div><div id="name-keyboard-container" class="virtual-keyboard"></div></div><div id="map-screen" class="screen hidden"><h1 class="title">Atlas del Sistema</h1><div id="map-actions"><button id="map-change-operative-button" class="button" style="font-size: 1rem; padding: 0.5rem 1rem;">Cambiar</button><button id="highscore-button" class="button" style="font-size: 1rem; padding: 0.5rem 1rem;">Top 10</button></div><div id="world-map-container"></div><div id="shutdown-button" title="Terminar Sesión"><svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,16H13V8H11V16Z M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" transform="rotate(90 12 12)"/></svg></div></div><div id="level-map-screen" class="screen hidden"><h1 id="level-map-header" class="title"></h1><div id="level-map-container"></div><button id="level-map-back-button" class="button">Volver al Atlas</button></div><div id="highscore-screen" class="screen hidden"><h1 class="title">Panteón de Programadores</h1><div id="highscore-container"></div><button id="highscore-back-button" class="button">Volver</button></div><div id="game-screen" class="screen hidden"><div id="corruption-overlay"></div><div id="game-ui"><div id="visual-hud-container"><div id="hud-world-icon"></div><div id="hud-text-info"></div></div><div id="word-display-container"></div><div id="game-ui-right-controls"><div id="d-pad-toggle" class="ui-control-button" title="Mostrar/Ocultar Controles"><svg viewBox="0 0 24 24"><path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V12H16.5A4.5,4.5 0 0,0 12,7.5A4.5,4.5 0 0,0 7.5,12H2V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M6,8V10H4V8H6M10,8V10H8V8H10M13,9.5A1.5,1.5 0 0,1 11.5,11A1.5,1.5 0 0,1 10,9.5A1.5,1.5 0 0,1 11.5,8A1.5,1.5 0 0,1 13,9.5M19.5,12A1.5,1.5 0 0,1 18,13.5A1.5,1.5 0 0,1 16.5,12A1.5,1.5 0 0,1 18,10.5A1.5,1.5 0 0,1 19.5,12M18,15H20V17H18V15M16,17H14V19H16V17M12,17H10V19H12V17M8,17H6V19H8V17Z" /></svg></div><div id="pause-button" class="ui-control-button" title="Pausa"><svg viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg></div></div></div><div id="maze-wrapper"></div><div id="d-pad-container" class="hidden"><div id="d-pad-up" class="d-pad-button"></div><div id="d-pad-left" class="d-pad-button"></div><div id="d-pad-right" class="d-pad-button"></div><div id="d-pad-down" class="d-pad-button"></div></div></div><div id="challenge-screen" class="screen hidden"><div id="challenge-container"><p class="prompt">Forma la palabra</p><div id="challenge-display-wrapper"><div id="challenge-blueprint"></div><div id="challenge-display"></div></div><button id="memory-pulse-button" class="button">Pulso de Memoria (-500 pts)</button></div><div id="challenge-keyboard-container" class="virtual-keyboard"></div></div><div id="results-screen" class="screen hidden"><div id="results-container"><h1 class="title">Resultados del Nivel</h1><div id="results-time" class="results-line"></div><div id="results-impacts" class="results-line"></div><div id="results-pulses" class="results-line"></div><div id="results-score" class="results-line"></div><button id="results-continue-button" class="button">Continuar</button></div></div><div id="victory-screen" class="screen hidden"><h1 class="title">¡NIVEL SUPERADO!</h1><button id="next-level-button" class="button">Volver al Atlas</button></div><div id="phase-transition-screen" class="screen hidden"><h1 class="title"></h1></div>
 
     <script>
-        // All JS code is now encapsulated in the MazeApp object, including all sub-modules.
-        // This is a complete, monolithic, and verified script.
-        const STORAGE_KEY = 'mazeData_v16.1';
-        const HIGHSCORE_KEY = 'mazeHighScores_v16.1';
+        // This is a complete, monolithic, and verified script. v29.4
+        const PROFILES_KEY = 'mazeProfiles_v29.4';
+        const HIGHSCORE_KEY = 'mazeHighScores_v29.4';
         const MazeApp = {
-            dom: { screens: {}, buttons: {}, displays: {}, containers: {}, overlays: {} },
+            dom: {  player: null, exitDoor: null, entityContainer: null },
             state: {
-                playerName: '', isShiftActive: false, isDPadVisible: false,
-                isPlayerStunned: false, isPaused: false,
+                profiles: [], activeProfileName: '', typedPlayerName: '', isShiftActive: false,
+                ticker: null, isDPadVisible: false, isPlayerStunned: false, isPaused: false,
                 impact: { count: 0, timer: null },
                 progress: { world: 0, level: 0 },
-                currentLevel: { worldIdx: 0, levelIdx: 0, phase: 0, phaseSet: [], startTime: 0, impacts: 0, pulses: 0 },
-                maze: [], currentMazeLayout: [], playerPosition: { row: 1, col: 1 }, exitPosition: { row: 1, col: 1 },
-                allLettersCollected: false, nextLetterIndex: 0,
-                lettersToCollect: [], mazeDimensions: { rows: 0, cols: 0, cellSize: 0 }
+                currentLevel: { worldIdx: 0, levelIdx: 0, phase: 0, currentPhaseSequence: [], startTime: 0, impacts: 0, pulses: 0 },
+                maze: [], firewalls: [], currentMazeLayout: [], playerPosition: { row: 1, col: 1 }, exitPosition: { row: 1, col: 1 },
+                allLettersCollected: false, nextLetterIndex: 0, lettersToCollect: [],
+                mazeDimensions: { rows: 0, cols: 0, cellSize: 0 }
             },
             config: {
-                NAME_MAX_LENGTH: 12,
-                IMPACT_RESET_DELAY: 3000,
+                TICK_INTERVAL: 50, NAME_MAX_LENGTH: 12, IMPACT_RESET_DELAY: 3000,
                 IMPACT_STUN_DURATIONS: { 1: 0, 2: 500, 3: 3000 },
+                CSS_CLASSES: { HIDDEN: 'hidden', ACTIVE: 'active', LOCKED: 'locked', COMPLETED: 'completed', CURRENT: 'current', TARGET: 'target', COLLECTED: 'collected', INACTIVE: 'inactive', TRANSITION_ZOOM: 'transition-zoom', VISIBLE: 'visible', IMPACT_SHAKE_1: 'impact-shake-1', IMPACT_SHAKE_2: 'impact-shake-2', CLOSED: 'closed', NAME_ERROR: 'error' },
                 WORLDS_DATA: [
-                    { name: "Mundo 1: La Carcasa y los Periféricos", mazeSize: [9, 13], icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4,2H20A2,2 0 0,1 22,4V16A2,2 0 0,1 20,18H15V20H17V22H7V20H9V18H4A2,2 0 0,1 2,16V4A2,2 0 0,1 4,2M4,4V12H20V4H4Z"/></svg>`, levels: [
-                        { name: "Dispositivos de Entrada", phaseSets: [ ["TECLADO","RATON","ESCANER"], ["MICROFONO","WEBCAM","JOYSTICK"], ["TABLETA","TACTIL","LECTOR"] ] },
-                        { name: "Dispositivos de Salida", phaseSets: [ ["MONITOR","PIXEL","BRILLO"], ["ALTAVOZ","VOLUMEN","AURICULAR"], ["IMPRESORA","TINTA","PLOTTER"] ] },
-                        { name: "Puertos y Conectividad", phaseSets: [ ["USB","PUERTO","CONECTOR"], ["ETHERNET","WIFI","ROUTER"], ["HDMI","JACK","OPTICO"] ] }
-                    ]},
-                    { name: "Mundo 2: El Gabinete Interno", mazeSize: [11, 15], icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M6,2H18V4H17V6H19V8H17V10H19V12H17V14H19V16H17V18H18V20H17V22H6V20H5V18H3V16H5V14H3V12H5V10H3V8H5V6H3V4H5V2H6M8,6V8H15V6H8M8,10V12H15V10H8M8,14V16H15V14H8Z"/></svg>`, levels: [
-                        { name: "La Placa Madre", phaseSets: [ ["CHIPSET","ZOCALO","CIRCUITO"], ["SLOT","SATA","PCI"], ["BIOS","UEFI","POST"] ] },
-                        { name: "Componentes Clave", phaseSets: [ ["RAM","FUENTE","VOLTAJE"], ["GRAFICA","GPU","VRAM"], ["COOLER","DISIPADOR","GABINETE"] ] },
-                        { name: "La Unidad Central (CPU)", phaseSets: [ ["NUCLEO","HILO","REGISTRO"], ["FRECUENCIA","CACHE","TURBO"], ["ALU","LOGICA","INSTRUCCION"] ] }
-                    ]},
-                    { name: "Mundo 3: El Universo del Almacenamiento", mazeSize: [13, 17], icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M16.5,16.44V11.5C16.5,10 15.65,8.83 14.5,8.25V5.5A2.5,2.5 0 0,0 12,3A2.5,2.5 0 0,0 9.5,5.5V8.25C8.35,8.83 7.5,10 7.5,11.5V16.44C6.36,16.83 5.5,17.83 5.5,19A2.5,2.5 0 0,0 8,21.5A2.5,2.5 0 0,0 10.5,19C10.5,17.83 9.64,16.83 8.5,16.44V11.5C8.5,10.61 9.09,9.85 9.88,9.54C10.05,9.47 10.23,9.42 10.4,9.38V5.5C10.4,5.22 10.6,5 11.25,5C11.69,5 12.31,5 12.75,5.5V9.38C12.92,9.42 13.1,9.47 13.27,9.54C14.06,9.85 14.65,10.61 14.65,11.5V16.44C13.5,16.83 12.64,17.83 12.64,19A2.5,2.5 0 0,0 15.14,21.5A2.5,2.5 0 0,0 17.64,19C17.64,17.83 16.78,16.83 15.64,16.44Z"/></svg>`, levels: [
-                        { name: "Tecnologías de Disco", phaseSets: [ ["VOLATIL","PERSISTE","MEMORIA"], ["MAGNETICO","OPTICO","FLASH"], ["FORMATEAR","PARTICION","SECTOR"] ] },
-                        { name: "Sistemas de Archivos", phaseSets: [ ["DIRECTORIO","ARCHIVO","ENLACE"], ["PERMISO","FECHA","TAMAÑO"], ["NTFS","FAT","EXT4"] ] },
-                        { name: "La Red Global", phaseSets: [ ["SERVIDOR","HOSTING","DOMINIO"], ["PROTOCOLO","IP","DNS"], ["CARGA","DESCARGA","STREAMING"] ] }
-                    ]},
-                    { name: "Mundo 4: El Lenguaje de la Máquina", mazeSize: [15, 19], icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M10.5,18H9V15H10.5V18M15,18H13.5V15H15V18M10,13.5H5.5V9H10V13.5M18.5,13.5H14V9H18.5V13.5M10.5,6H9V3H10.5V6M15,6H13.5V3H15V6M4,20V2H20V20H4Z"/></svg>`, levels: [
-                        { name: "Fundamentos del Bit", phaseSets: [ ["BIT","BYTE","BINARIO"], ["BOOLEANO","COMPUERTA","TRANSISTOR"], ["HEXADECIMAL","SEÑAL","PULSO"] ] },
-                        { name: "Múltiplos y Medidas", phaseSets: [ ["KILOBYTE","MEGABYTE","GIGABYTE"], ["KILOBIT","MEGABIT","GIGABIT"], ["BITRATE","ANCHO","BANDA"] ] },
-                        { name: "Codificación y Compresión", phaseSets: [ ["ASCII","UNICODE","UTF"], ["COMPRIMIR","ZIP","ALGORITMO"], ["PARIDAD","CHECKSUM","ERROR"] ] }
-                    ]},
-                    { name: "Mundo 5: El Software y la Interfaz", mazeSize: [17, 21], icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4,4H20V20H4V4M6,8V18H18V8H6Z"/></svg>`, levels: [
-                        { name: "El Sistema Operativo", phaseSets: [ ["ESCRITORIO","VENTANA","ICONO"], ["KERNEL","CONTROLADOR","PROCESO"], ["COMANDO","TERMINAL","SHELL"] ] },
-                        { name: "Ecosistema de Aplicaciones", phaseSets: [ ["CODIGO","COMPILAR","LIBRERIA"], ["APLICACION","NAVEGADOR","ANTIVIRUS"], ["HTML","CSS","SCRIPT"] ] },
-                        { name: "Seguridad e Identidad Digital", phaseSets: [ ["USUARIO","LOGIN","PASSWORD"], ["ENCRIPTAR","FIREWALL","MALWARE"], ["COOKIE","HISTORIAL","PESTAÑA"] ] }
-                    ]}
+                    { name: "Mundo 1: La Carcasa y los Periféricos", mazeSizeRange: { rows: [9, 13], cols: [13, 17] }, firewall: { chance: 0.0, cycle: [0,0] }, icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4,2H20A2,2 0 0,1 22,4V16A2,2 0 0,1 20,18H15V20H17V22H7V20H9V18H4A2,2 0 0,1 2,16V4A2,2 0 0,1 4,2M4,4V12H20V4H4Z"/></svg>`, 
+                      theme: { '--color-primary-accent': '#3A86FF', '--color-wall': '#1B263B', '--color-path': '#415A77', '--color-exit': '#3A86FF' },
+                      levels: [ { name: "Dispositivos de Entrada", wordArsenal: { '1': ["RATON", "USB", "JACK"], '2': ["TECLADO", "WEBCAM", "TACTIL"], '3': ["ESCANER", "LECTOR", "JOYSTICK"] } }, { name: "Dispositivos de Salida", wordArsenal: { '1': ["PIXEL", "TINTA", "LED"], '2': ["BRILLO", "VOLUMEN", "PLOTTER"], '3': ["MONITOR", "ALTAVOZ", "IMPRESORA"] } }, { name: "Puertos y Conectividad", wordArsenal: { '1': ["WIFI", "HDMI", "SATA"], '2': ["PUERTO", "ROUTER", "OPTICO"], '3': ["ETHERNET", "CONECTOR", "BLUETOOTH"] } } ]},
+                    { name: "Mundo 2: El Gabinete Interno", mazeSizeRange: { rows: [11, 15], cols: [15, 19] }, firewall: { chance: 0.04, cycle: [4, 2] }, icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M6,2H18V4H17V6H19V8H17V10H19V12H17V14H19V16H17V18H18V20H17V22H6V20H5V18H3V16H5V14H3V12H5V10H3V8H5V6H3V4H5V2H6M8,6V8H15V6H8M8,10V12H15V10H8M8,14V16H15V14H8Z"/></svg>`, 
+                      theme: { '--color-primary-accent': '#8338EC', '--color-wall': '#342647', '--color-path': '#534073', '--color-exit': '#8338EC' },
+                      levels: [ { name: "La Placa Madre", wordArsenal: { '1': ["BIOS", "UEFI", "POST"], '2': ["SLOT", "ZOCALO", "CHIPSET"], '3': ["CIRCUITO", "SATA", "PCI"] } }, { name: "Componentes Clave", wordArsenal: { '1': ["RAM", "GPU", "VRAM"], '2': ["FUENTE", "COOLER", "VOLTAJE"], '3': ["GRAFICA", "DISIPADOR", "GABINETE"] } }, { name: "La Unidad Central (CPU)", wordArsenal: { '1': ["ALU", "HILO", "CACHE"], '2': ["NUCLEO", "TURBO", "LOGICA"], '3': ["REGISTRO", "FRECUENCIA", "INSTRUCCION"] } } ]},
+                    { name: "Mundo 3: El Universo del Almacenamiento", mazeSizeRange: { rows: [13, 17], cols: [17, 21] }, firewall: { chance: 0.06, cycle: [3, 2] }, icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M16.5,16.44V11.5C16.5,10 15.65,8.83 14.5,8.25V5.5A2.5,2.5 0 0,0 12,3A2.5,2.5 0 0,0 9.5,5.5V8.25C8.35,8.83 7.5,10 7.5,11.5V16.44C6.36,16.83 5.5,17.83 5.5,19A2.5,2.5 0 0,0 8,21.5A2.5,2.5 0 0,0 10.5,19C10.5,17.83 9.64,16.83 8.5,16.44V11.5C8.5,10.61 9.09,9.85 9.88,9.54C10.05,9.47 10.23,9.42 10.4,9.38V5.5C10.4,5.22 10.6,5 11.25,5C11.69,5 12.31,5 12.75,5.5V9.38C12.92,9.42 13.1,9.47 13.27,9.54C14.06,9.85 14.65,10.61 14.65,11.5V16.44C13.5,16.83 12.64,17.83 12.64,19A2.5,2.5 0 0,0 15.14,21.5A2.5,2.5 0 0,0 17.64,19C17.64,17.83 16.78,16.83 15.64,16.44Z"/></svg>`, 
+                      theme: { '--color-primary-accent': '#2A9D8F', '--color-wall': '#264653', '--color-path': '#2d6a78', '--color-exit': '#E9C46A' },
+                      levels: [ { name: "Tecnologías de Disco", wordArsenal: { '1': ["FAT", "NTFS", "EXT4"], '2': ["SECTOR", "OPTICO", "FLASH"], '3': ["MAGNETICO", "FORMATEAR", "PARTICION"] } }, { name: "Sistemas de Archivos", wordArsenal: { '1': ["FECHA", "TAMAÑO", "RUTA"], '2': ["ENLACE", "ARCHIVO", "PERMISO"], '3': ["VOLATIL", "PERSISTE", "DIRECTORIO"] } }, { name: "La Red Global", wordArsenal: { '1': ["IP", "DNS", "HOST"], '2': ["CARGA", "STREAM", "DOMINIO"], '3': ["SERVIDOR", "PROTOCOLO", "DESCARGA"] } } ]},
+                    { name: "Mundo 4: El Lenguaje de la Máquina", mazeSizeRange: { rows: [15, 19], cols: [19, 23] }, firewall: { chance: 0.08, cycle: [3, 3] }, icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M10.5,18H9V15H10.5V18M15,18H13.5V15H15V18M10,13.5H5.5V9H10V13.5M18.5,13.5H14V9H18.5V13.5M10.5,6H9V3H10.5V6M15,6H13.5V3H15V6M4,20V2H20V20H4Z"/></svg>`, 
+                      theme: { '--color-primary-accent': '#F4A261', '--color-wall': '#282828', '--color-path': '#424242', '--color-exit': '#E76F51' },
+                      levels: [ { name: "Fundamentos del Bit", wordArsenal: { '1': ["BIT", "BYTE", "DATO"], '2': ["SEÑAL", "PULSO", "BINARIO"], '3': ["BOOLEANO", "COMPUERTA", "TRANSISTOR"] } }, { name: "Múltiplos y Medidas", wordArsenal: { '1': ["MEGA", "GIGA", "TERA"], '2': ["BITRATE", "ANCHO", "BANDA"], '3': ["KILOBYTE", "MEGABIT", "GIGABIT"] } }, { name: "Codificación y Compresión", wordArsenal: { '1': ["ZIP", "UTF", "ASCII"], '2': ["PARIDAD", "ERROR", "CHECKSUM"], '3': ["UNICODE", "COMPRIMIR", "ALGORITMO"] } } ]},
+                    { name: "Mundo 5: El Software y la Interfaz", mazeSizeRange: { rows: [17, 21], cols: [21, 25] }, firewall: { chance: 0.10, cycle: [2, 3] }, icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4,4H20V20H4V4M6,8V18H18V8H6Z"/></svg>`, 
+                      theme: { '--color-primary-accent': '#06D6A0', '--color-wall': '#073B4C', '--color-path': '#118AB2', '--color-exit': '#06D6A0' },
+                      levels: [ { name: "El Sistema Operativo", wordArsenal: { '1': ["ICONO", "SHELL", "PROCESO"], '2': ["KERNEL", "VENTANA", "ESCRITORIO"], '3': ["COMANDO", "TERMINAL", "CONTROLADOR"] } }, { name: "Ecosistema de Aplicaciones", wordArsenal: { '1': ["HTML", "CSS", "API"], '2': ["CODIGO", "SCRIPT", "COMPILAR"], '3': ["LIBRERIA", "NAVEGADOR", "APLICACION"] } }, { name: "Seguridad e Identidad Digital", wordArsenal: { '1': ["LOGIN", "COOKIE", "MALWARE"], '2': ["USUARIO", "FIREWALL", "PESTAÑA"], '3': ["PASSWORD", "HISTORIAL", "ENCRIPTAR"] } } ]}
                 ],
-                NAME_KEYBOARD_LAYOUT: [ ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'], ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'], ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '_', '@'], ['SHIFT', 'SPACE', 'BACKSPACE', 'ACEPTAR'] ],
+                NAME_KEYBOARD_LAYOUT: [ ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'], ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'], ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '_', '@'], ['SHIFT', 'BACKSPACE', 'ACEPTAR'] ],
                 CHALLENGE_KEYBOARD_LAYOUT: [ ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'], ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'], ['Z', 'X', 'C', 'V', 'B', 'N', 'M'], ['BACKSPACE', 'ENTER'] ]
             },
             ui: {
-                showScreen(screenName) { Object.values(MazeApp.dom.screens).forEach(s => s.classList.add('hidden')); if (MazeApp.dom.screens[screenName]) { MazeApp.dom.screens[screenName].classList.remove('hidden'); MazeApp.dom.screens[screenName].classList.add('transition-zoom'); } },
-                createVirtualKeyboard(container, layout, onKeyPress) {
-                    container.innerHTML = '';
-                    layout.forEach(rowKeys => {
-                        const rowDiv = document.createElement('div');
-                        rowDiv.className = 'keyboard-row';
-                        rowKeys.forEach(keyChar => { const key = document.createElement('div'); key.className = 'key'; key.dataset.key = keyChar; key.textContent = keyChar === 'BACKSPACE' ? '⌫' : (keyChar === 'SHIFT' ? '⇧' : keyChar); key.addEventListener('click', () => onKeyPress(keyChar)); rowDiv.appendChild(key); });
-                        container.appendChild(rowDiv);
-                    });
-                },
+                showScreen(screenName) { const CSS = MazeApp.config.CSS_CLASSES; Object.values(MazeApp.dom.screens).forEach(s => s.classList.add(CSS.HIDDEN)); if (MazeApp.dom.screens[screenName]) { MazeApp.dom.screens[screenName].classList.remove(CSS.HIDDEN); MazeApp.dom.screens[screenName].classList.add(CSS.TRANSITION_ZOOM); } },
+                createVirtualKeyboard(container, layout, onKeyPress) { container.innerHTML = ''; layout.forEach(rowKeys => { const rowDiv = document.createElement('div'); rowDiv.className = 'keyboard-row'; rowKeys.forEach(keyChar => { const key = document.createElement('div'); key.className = 'key'; key.dataset.key = keyChar; key.textContent = keyChar === 'BACKSPACE' ? '⌫' : (keyChar === 'SHIFT' ? '⇧' : keyChar); key.addEventListener('click', () => onKeyPress(keyChar)); rowDiv.appendChild(key); }); container.appendChild(rowDiv); }); },
                 setupNameDisplay() { const container = MazeApp.dom.containers.nameDisplay; container.innerHTML = ''; for (let i = 0; i < MazeApp.config.NAME_MAX_LENGTH; i++) { const cell = document.createElement('div'); cell.className = 'name-char-cell'; container.appendChild(cell); } this.updateNameDisplay(); },
-                updateNameDisplay() {
-                    const { playerName } = MazeApp.state; const { nameDisplay } = MazeApp.dom.containers;
-                    const cells = nameDisplay.querySelectorAll('.name-char-cell');
-                    cells.forEach((cell, i) => { const char = playerName[i]; cell.textContent = char || ''; cell.classList.toggle('filled', !!char); cell.classList.remove('cursor'); });
-                    if (playerName.length < MazeApp.config.NAME_MAX_LENGTH) { cells[playerName.length].classList.add('cursor'); }
-                },
-                updateNameKeyboardAppearance() {
-                    const container = MazeApp.dom.containers.nameKeyboard; if (!container) return;
-                    const shiftKey = container.querySelector('[data-key="SHIFT"]'); if (shiftKey) shiftKey.classList.toggle('active', MazeApp.state.isShiftActive);
-                    container.querySelectorAll('.key').forEach(key => { const keyChar = key.dataset.key; if (keyChar.length === 1 && isNaN(keyChar) && keyChar !== '@' && keyChar !== '_') { key.textContent = MazeApp.state.isShiftActive ? keyChar.toUpperCase() : keyChar.toLowerCase(); } });
-                },
-                updateGameUI() {
-                    const s = MazeApp.state; const d = MazeApp.dom.displays;
-                    const { levelData, word } = MazeApp.core.getCurrentPhaseData();
-                    d.hudIcon.innerHTML = '';
-                    d.hudTextInfo.textContent = `MUNDO ${s.currentLevel.worldIdx + 1} - ${levelData.name} (${s.currentLevel.phase + 1}/${s.currentLevel.phaseSet.length})`;
-                    d.wordDisplay.innerHTML = '';
-                    word.split('').forEach((char, index) => { const span = document.createElement('span'); span.textContent = char; span.dataset.index = index; if (index < s.nextLetterIndex) span.className = 'collected'; if (index === s.nextLetterIndex && !s.allLettersCollected) span.className = 'target'; d.wordDisplay.appendChild(span); });
-                },
-                updateDPadVisibility() { const d = MazeApp.dom; const s = MazeApp.state; d.containers.dPad.classList.toggle('hidden', !s.isDPadVisible); d.buttons.dPadToggle.classList.toggle('active', s.isDPadVisible); },
-                animateLetterCollection(letter) {
-                    const s = MazeApp.state; const targetSpan = MazeApp.dom.displays.wordDisplay.querySelector(`span[data-index="${s.nextLetterIndex}"]`); if (!letter || !targetSpan) return;
-                    const startRect = letter.getBoundingClientRect(); const endRect = targetSpan.getBoundingClientRect(); const flyer = letter.cloneNode(true); flyer.className = 'flying-letter'; document.body.appendChild(flyer);
-                    Object.assign(flyer.style, { left: `${startRect.left}px`, top: `${startRect.top}px`, width: `${startRect.width}px`, height: `${startRect.height}px`, fontSize: letter.style.fontSize, borderRadius: letter.style.borderRadius, transform: 'scale(1) rotate(0deg)' });
-                    requestAnimationFrame(() => { Object.assign(flyer.style, { left: `${endRect.left + endRect.width / 2 - startRect.width / 4}px`, top: `${endRect.top + endRect.height / 2 - startRect.height / 4}px`, transform: 'scale(0.2) rotate(360deg)', opacity: '0' }); });
-                    letter.classList.add('collected-in-maze');
-                    setTimeout(() => flyer.remove(), getComputedStyle(document.documentElement).getPropertyValue('--animation-duration-collect').replace('s', '') * 1000);
-                },
-                renderWorldMap() {
-                    const c = MazeApp.config; const p = MazeApp.state.progress; const container = MazeApp.dom.containers.worldMap;
-                    container.innerHTML = '';
-                    c.WORLDS_DATA.forEach((world, worldIdx) => {
-                        const isUnlocked = worldIdx <= p.world;
-                        const isCompleted = worldIdx < p.world;
-                        const isCurrent = worldIdx === p.world;
-                        
-                        const iconDiv = document.createElement('div');
-                        iconDiv.className = 'world-icon';
-                        if (!isUnlocked) iconDiv.classList.add('locked');
-                        if (isCurrent) iconDiv.classList.add('current');
-                        if (isCompleted) iconDiv.classList.add('completed');
-                        
-                        let pipsHTML = '';
-                        for(let i = 0; i < world.levels.length; i++) {
-                            let pipClass = '';
-                            if (worldIdx < p.world) { pipClass = 'completed'; }
-                            else if (worldIdx === p.world && i < p.level) { pipClass = 'completed'; }
-                            else if (worldIdx === p.world && i === p.level) { pipClass = 'unlocked'; }
-                            pipsHTML += `<div class="level-pip ${pipClass}"></div>`;
-                        }
-
-                        iconDiv.innerHTML = `
-                            ${world.icon}
-                            <div class="world-name">${world.name.split(':')[1].trim()}</div>
-                            <div class="world-level-pips">${pipsHTML}</div>
-                            <svg class="completion-badge" viewBox="0 0 24 24"><path fill="currentColor" d="M12,17.27L18.18,21L17,14.64L22,9.73L15.45,8.82L12,2.5L8.55,8.82L2,9.73L7,14.64L5.82,21L12,17.27Z"/></svg>
-                        `;
-
-                        if (isUnlocked) {
-                            iconDiv.addEventListener('click', () => MazeApp.core.showLevelMap(worldIdx));
-                        }
-                        container.appendChild(iconDiv);
-                    });
-                },
-                renderLevelMap(worldIdx) {
-                    const p = MazeApp.state.progress;
-                    const worldData = MazeApp.config.WORLDS_DATA[worldIdx];
-                    const container = MazeApp.dom.containers.levelMap;
-                    MazeApp.dom.displays.levelMapHeader.textContent = worldData.name;
-                    container.innerHTML = '';
-                    worldData.levels.forEach((level, levelIdx) => {
-                        const isUnlocked = worldIdx < p.world || (worldIdx === p.world && levelIdx <= p.level);
-                        const isCompleted = worldIdx < p.world || (worldIdx === p.world && levelIdx < p.level);
-
-                        const nodeDiv = document.createElement('div');
-                        nodeDiv.className = 'level-node';
-                        if(!isUnlocked) nodeDiv.classList.add('locked');
-                        if(isCompleted) nodeDiv.classList.add('completed');
-                        
-                        nodeDiv.innerHTML = `
-                            <div class="level-info-header">
-                                <span class="level-name">${level.name}</span>
-                                <div class="level-progress-dots">
-                                    <div class="progress-dot ${isCompleted ? 'completed' : ''}"></div>
-                                </div>
-                            </div>
-                        `;
-
-                        if(isUnlocked) {
-                            nodeDiv.addEventListener('click', () => MazeApp.core.selectLevel(worldIdx, levelIdx));
-                        }
-                        container.appendChild(nodeDiv);
-                    });
-                },
-                renderHighScores() {
-                    const highScores = MazeApp.core.getHighScores();
-                    const container = MazeApp.dom.containers.highscore;
-                    container.innerHTML = '';
-                    if (highScores.length === 0) {
-                        container.innerHTML = '<div class="score-row">No hay puntuaciones todavía.</div>';
-                        return;
-                    }
-                    highScores.forEach((score, index) => {
-                        const row = document.createElement('div');
-                        row.className = 'score-row';
-                        row.innerHTML = `
-                            <span class="score-rank">${index + 1}.</span>
-                            <span class="score-name">${score.name}</span>
-                            <span class="score-value">${score.score}</span>
-                        `;
-                        container.appendChild(row);
-                    });
-                }
+                updateNameDisplay() { const { typedPlayerName } = MazeApp.state; const { nameDisplay } = MazeApp.dom.containers; const cells = nameDisplay.querySelectorAll('.name-char-cell'); cells.forEach((cell, i) => { const char = typedPlayerName[i]; cell.textContent = char || ''; cell.classList.toggle('filled', !!char); cell.classList.remove('cursor'); }); if (typedPlayerName.length < MazeApp.config.NAME_MAX_LENGTH) { cells[typedPlayerName.length].classList.add('cursor'); } nameDisplay.classList.remove(MazeApp.config.CSS_CLASSES.NAME_ERROR);},
+                updateNameKeyboardAppearance() { const container = MazeApp.dom.containers.nameKeyboard; if (!container) return; const shiftKey = container.querySelector('[data-key="SHIFT"]'); if (shiftKey) shiftKey.classList.toggle(MazeApp.config.CSS_CLASSES.ACTIVE, MazeApp.state.isShiftActive); container.querySelectorAll('.key').forEach(key => { const keyChar = key.dataset.key; if (keyChar.length === 1 && isNaN(keyChar) && keyChar !== '@' && keyChar !== '_') { key.textContent = MazeApp.state.isShiftActive ? keyChar.toUpperCase() : keyChar.toLowerCase(); } }); },
+                updateGameUI() { const s = MazeApp.state; const d = MazeApp.dom.displays; const CSS = MazeApp.config.CSS_CLASSES; const { levelData, word } = MazeApp.core.getCurrentPhaseData(); d.hudIcon.innerHTML = MazeApp.core.getCurrentWorldData().icon; d.hudTextInfo.textContent = `${s.activeProfileName} | MUNDO ${s.currentLevel.worldIdx + 1} - ${levelData.name} (${s.currentLevel.phase + 1}/${s.currentLevel.currentPhaseSequence.length})`; d.wordDisplay.innerHTML = ''; word.split('').forEach((char, index) => { const span = document.createElement('span'); span.textContent = char; span.dataset.index = index; if (index < s.nextLetterIndex) span.className = CSS.COLLECTED; if (index === s.nextLetterIndex && !s.allLettersCollected) span.className = CSS.TARGET; d.wordDisplay.appendChild(span); }); },
+                updateDPadVisibility() { const d = MazeApp.dom; const s = MazeApp.state; const CSS = MazeApp.config.CSS_CLASSES; d.containers.dPad.classList.toggle(CSS.HIDDEN, !s.isDPadVisible); const dPadToggle = d.containers.gameUIRightControls.querySelector('#d-pad-toggle'); if(dPadToggle) dPadToggle.classList.toggle(CSS.ACTIVE, s.isDPadVisible); },
+                animateLetterCollection(letter) { const s = MazeApp.state; const targetSpan = MazeApp.dom.displays.wordDisplay.querySelector(`span[data-index="${s.nextLetterIndex}"]`); if (!letter || !targetSpan) return; const startRect = letter.getBoundingClientRect(); const endRect = targetSpan.getBoundingClientRect(); const flyer = letter.cloneNode(true); flyer.className = 'flying-letter'; document.body.appendChild(flyer); Object.assign(flyer.style, { left: `${startRect.left}px`, top: `${startRect.top}px`, width: `${startRect.width}px`, height: `${startRect.height}px`, fontSize: letter.style.fontSize, borderRadius: letter.style.borderRadius, transform: 'scale(1) rotate(0deg)' }); requestAnimationFrame(() => { Object.assign(flyer.style, { left: `${endRect.left + endRect.width / 2 - startRect.width / 4}px`, top: `${endRect.top + endRect.height / 2 - startRect.height / 4}px`, transform: 'scale(0.2) rotate(360deg)', opacity: '0' }); }); letter.classList.add('collected-in-maze'); setTimeout(() => flyer.remove(), getComputedStyle(document.documentElement).getPropertyValue('--animation-duration-collect').replace('s', '') * 1000); },
+                renderProfileSelector() { const s = MazeApp.state; const c = MazeApp.config; const grid = MazeApp.dom.containers.profileGrid; grid.innerHTML = ''; s.profiles.forEach(profile => { const card = document.createElement('div'); card.className = 'profile-card'; const worldIdx = profile.progress.world; const levelIdx = profile.progress.level; const worldData = c.WORLDS_DATA[worldIdx]; const levelData = worldData.levels[levelIdx]; card.innerHTML = `<div class="profile-card-header"><span class="profile-name">${profile.playerName}</span><div class="profile-world-icon">${worldData.icon}</div></div><span class="profile-progress">Mundo ${worldIdx + 1}: ${levelData.name}</span>`; const deleteButton = document.createElement('div'); deleteButton.className = 'delete-profile-button'; deleteButton.innerHTML = '&times;'; deleteButton.title = 'Eliminar Operativo'; deleteButton.addEventListener('click', (e) => { e.stopPropagation(); MazeApp.core.deleteProfile(profile.playerName); }); card.appendChild(deleteButton); card.addEventListener('click', () => MazeApp.core.selectProfile(profile.playerName)); grid.appendChild(card); }); const newCard = document.createElement('div'); newCard.className = 'new-profile-card'; newCard.innerHTML = `<div class="new-profile-text"><span>+</span>NUEVO OPERATIVO</div>`; newCard.addEventListener('click', MazeApp.core.transitionToNameScreen); grid.appendChild(newCard); },
+                renderWorldMap() { const c = MazeApp.config; const p = MazeApp.state.progress; const container = MazeApp.dom.containers.worldMap; const CSS = c.CSS_CLASSES; container.innerHTML = ''; c.WORLDS_DATA.forEach((world, worldIdx) => { const isUnlocked = worldIdx <= p.world; const isCompleted = worldIdx < p.world; const isCurrent = worldIdx === p.world; const iconDiv = document.createElement('div'); iconDiv.className = 'world-icon'; if (!isUnlocked) iconDiv.classList.add(CSS.LOCKED); if (isCurrent) iconDiv.classList.add(CSS.CURRENT); if (isCompleted) iconDiv.classList.add(CSS.COMPLETED); let pipsHTML = ''; for(let i = 0; i < world.levels.length; i++) { let pipClass = ''; if (worldIdx < p.world) { pipClass = CSS.COMPLETED; } else if (worldIdx === p.world && i < p.level) { pipClass = CSS.COMPLETED; } else if (worldIdx === p.world && i === p.level) { pipClass = 'unlocked'; } pipsHTML += `<div class="level-pip ${pipClass}"></div>`; } iconDiv.innerHTML = `${world.icon}<div class="world-name">${world.name.split(':')[1].trim()}</div><div class="world-level-pips">${pipsHTML}</div><div class="completion-badge"><svg viewBox="0 0 24 24"><path d="M12,17.27L18.18,21L17,14.64L22,9.73L15.45,8.82L12,2.5L8.55,8.82L2,9.73L7,14.64L5.82,21L12,17.27Z"/></svg></div>`; if (isUnlocked) { iconDiv.addEventListener('click', () => MazeApp.core.showLevelMap(worldIdx)); } container.appendChild(iconDiv); }); },
+                renderLevelMap(worldIdx) { const p = MazeApp.state.progress; const CSS = MazeApp.config.CSS_CLASSES; const worldData = MazeApp.config.WORLDS_DATA[worldIdx]; const container = MazeApp.dom.containers.levelMap; MazeApp.dom.displays.levelMapHeader.textContent = worldData.name; container.innerHTML = ''; worldData.levels.forEach((level, levelIdx) => { const isUnlocked = worldIdx < p.world || (worldIdx === p.world && levelIdx <= p.level); const isCompleted = worldIdx < p.world || (worldIdx === p.world && levelIdx < p.level); const nodeDiv = document.createElement('div'); nodeDiv.className = 'level-node'; if(!isUnlocked) nodeDiv.classList.add(CSS.LOCKED); if(isCompleted) nodeDiv.classList.add(CSS.COMPLETED); nodeDiv.innerHTML = `<div class="level-info-header"><span class="level-name">${level.name}</span><div class="level-progress-dots"><div class="progress-dot ${isCompleted ? CSS.COMPLETED : ''}"></div></div></div>`; if(isUnlocked) { nodeDiv.addEventListener('click', () => MazeApp.core.selectLevel(worldIdx, levelIdx)); } container.appendChild(nodeDiv); }); },
+                renderHighScores() { const highScores = MazeApp.core.getHighScores(); const container = MazeApp.dom.containers.highscore; container.innerHTML = ''; if (highScores.length === 0) { container.innerHTML = '<div class="score-row">No hay puntuaciones todavía.</div>'; return; } highScores.forEach((score, index) => { const row = document.createElement('div'); row.className = 'score-row'; row.innerHTML = `<span class="score-rank">${index + 1}.</span><span class="score-name">${score.name}</span><span class="score-value">${score.score}</span>`; container.appendChild(row); }); }
             },
             maze: {
-                generate(rows, cols) { const maze = Array.from({ length: rows }, () => Array(cols).fill(1)); const stack = []; const start = { row: 1, col: 1 }; maze[start.row][start.col] = 0; stack.push(start); while (stack.length > 0) { let current = stack[stack.length - 1]; const neighbors = []; const directions = [[0, 2], [0, -2], [2, 0], [-2, 0]]; directions.sort(() => Math.random() - 0.5); for (const [dr, dc] of directions) { const newRow = current.row + dr, newCol = current.col + dc; if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 && maze[newRow][newCol] === 1) { neighbors.push({ row: newRow, col: newCol, wallRow: current.row + dr / 2, wallCol: current.col + dc / 2 }); } } if (neighbors.length > 0) { const next = neighbors[0]; maze[next.wallRow][next.wallCol] = 0; maze[next.row][next.col] = 0; stack.push(next); } else { stack.pop(); } } MazeApp.state.currentMazeLayout = maze; },
-                render() {
-                    const s = MazeApp.state; const wrapper = MazeApp.dom.containers.mazeWrapper;
-                    const availableWidth = wrapper.clientWidth; const availableHeight = wrapper.clientHeight; if (availableWidth === 0 || availableHeight === 0) { return false; }
-                    const { worldData } = MazeApp.core.getCurrentPhaseData(); s.mazeDimensions.rows = worldData.mazeSize[0]; s.mazeDimensions.cols = worldData.mazeSize[1];
-                    s.mazeDimensions.cellSize = Math.floor(Math.min(availableWidth / s.mazeDimensions.cols, availableHeight / s.mazeDimensions.rows));
-                    const mazePixelWidth = s.mazeDimensions.cols * s.mazeDimensions.cellSize; const mazePixelHeight = s.mazeDimensions.rows * s.mazeDimensions.cellSize; const gridTemplate = `repeat(${s.mazeDimensions.rows}, 1fr) / repeat(${s.mazeDimensions.cols}, 1fr)`;
-                    wrapper.innerHTML = `<div id="maze-container" style="width:${mazePixelWidth}px; height:${mazePixelHeight}px; grid-template:${gridTemplate};"></div><div id="entity-container" style="width:${mazePixelWidth}px; height:${mazePixelHeight}px; grid-template:${gridTemplate};"></div>`;
-                    const mazeContainer = wrapper.querySelector('#maze-container');
-                    s.currentMazeLayout.flat().forEach(cellType => { const cellDiv = document.createElement('div'); cellDiv.className = `maze-cell ${cellType === 1 ? 'wall' : 'path'}`; mazeContainer.appendChild(cellDiv); });
-                    return true;
-                },
-                placeEntities() { const s = MazeApp.state; const entityContainer = document.getElementById('entity-container'); if (!entityContainer) return false; const pathCells = []; s.currentMazeLayout.forEach((row, r_idx) => row.forEach((cell, c_idx) => { if (cell === 0) pathCells.push({row: r_idx, col: c_idx}) })); pathCells.sort(() => 0.5 - Math.random()); const { word } = MazeApp.core.getCurrentPhaseData(); if (pathCells.length < word.length + 2) { return false; } s.playerPosition = pathCells.pop(); s.exitPosition = pathCells.pop(); entityContainer.innerHTML = '<div id="player"></div><div id="exit-door"></div>'; s.nextLetterIndex = 0; s.allLettersCollected = false; s.lettersToCollect = word.split('').map((char, index) => { const pos = pathCells.pop(); if (!pos) return null; const letterDiv = document.createElement('div'); letterDiv.className = `letter ${index > 0 ? 'inactive' : 'target'}`; letterDiv.textContent = char; entityContainer.appendChild(letterDiv); return { char, row: pos.row, col: pos.col, collected: false, element: letterDiv }; }).filter(Boolean); this.updateAllEntityPositions(); return true; },
-                updateAllEntityPositions() { const { cellSize } = MazeApp.state.mazeDimensions; if(cellSize === 0) return; const playerDiv = document.getElementById('player'); if (playerDiv) { playerDiv.style.width = `${cellSize * 0.7}px`; playerDiv.style.height = `${cellSize * 0.7}px`; playerDiv.style.gridRowStart = MazeApp.state.playerPosition.row + 1; playerDiv.style.gridColumnStart = MazeApp.state.playerPosition.col + 1; } const exitDoorDiv = document.getElementById('exit-door'); if (exitDoorDiv) { exitDoorDiv.style.width = `${cellSize * 0.8}px`; exitDoorDiv.style.height = `${cellSize * 0.8}px`; exitDoorDiv.style.gridRowStart = MazeApp.state.exitPosition.row + 1; exitDoorDiv.style.gridColumnStart = MazeApp.state.exitPosition.col + 1; } MazeApp.state.lettersToCollect.forEach(letter => { if (letter.element) { const letterSize = cellSize * 0.8; letter.element.style.width = `${letterSize}px`; letter.element.style.height = `${letterSize}px`; letter.element.style.fontSize = `${letterSize * 0.7}px`; letter.element.style.borderRadius = `${letterSize * 0.15}px`; letter.element.style.gridRowStart = letter.row + 1; letter.element.style.gridColumnStart = letter.col + 1; } }); },
-                movePlayer(direction) {
-                    if (MazeApp.state.isPlayerStunned || MazeApp.state.isPaused) return;
-                    const s = MazeApp.state; const moveMap = { up: { dr: -1, dc: 0 }, down: { dr: 1, dc: 0 }, left: { dr: 0, dc: -1 }, right: { dr: 0, dc: 1 } }; const move = moveMap[direction]; if (!move) return;
-                    let { row, col } = { ...s.playerPosition }; row += move.dr; col += move.dc;
-                    if (s.currentMazeLayout[row] && s.currentMazeLayout[row][col] === 0) {
-                        s.playerPosition = { row, col }; document.getElementById('player').style.gridRowStart = row + 1; document.getElementById('player').style.gridColumnStart = col + 1; this.checkCollision();
-                    } else { MazeApp.core.handleImpact(); }
-                },
-                checkCollision() { 
-                    const s = MazeApp.state;
-                    const nextLetter = s.lettersToCollect[s.nextLetterIndex]; 
-                    if (nextLetter && !nextLetter.collected && nextLetter.row === s.playerPosition.row && nextLetter.col === s.playerPosition.col) { 
-                        MazeApp.ui.animateLetterCollection(nextLetter.element); 
-                        nextLetter.collected = true; s.nextLetterIndex++; 
-                        const newNextLetter = s.lettersToCollect[s.nextLetterIndex]; 
-                        if (newNextLetter) { newNextLetter.element.classList.remove('inactive'); newNextLetter.element.classList.add('target'); } 
-                        else { s.allLettersCollected = true; document.getElementById('exit-door').classList.add('active'); } 
-                        MazeApp.ui.updateGameUI(); 
-                    } 
-                    if (s.allLettersCollected && s.playerPosition.row === s.exitPosition.row && s.playerPosition.col === s.exitPosition.col) { 
-                        MazeApp.core.startChallenge();
-                    }
-                }
+                generate(rows, cols) { const s = MazeApp.state; s.firewalls = []; const maze = Array.from({ length: rows }, () => Array(cols).fill(1)); const stack = []; const start = { row: 1, col: 1 }; maze[start.row][start.col] = 0; stack.push(start); while (stack.length > 0) { let current = stack[stack.length - 1]; const neighbors = []; const directions = [[0, 2], [0, -2], [2, 0], [-2, 0]]; directions.sort(() => Math.random() - 0.5); for (const [dr, dc] of directions) { const newRow = current.row + dr, newCol = current.col + dc; if (newRow > 0 && newRow < rows - 1 && newCol > 0 && newCol < cols - 1 && maze[newRow][newCol] === 1) { neighbors.push({ row: newRow, col: newCol, wallRow: current.row + dr / 2, wallCol: current.col + dc / 2 }); } } if (neighbors.length > 0) { const next = neighbors[0]; maze[next.wallRow][next.wallCol] = 0; maze[next.row][next.col] = 0; stack.push(next); } else { stack.pop(); } } const firewallConfig = MazeApp.core.getCurrentWorldData().firewall; if (firewallConfig.chance > 0) { for (let r = 1; r < rows - 1; r++) { for (let c = 1; c < cols - 1; c++) { if (maze[r][c] === 0 && Math.random() < firewallConfig.chance) { maze[r][c] = 2; } } } } s.currentMazeLayout = maze; },
+                render(rows, cols) { const s = MazeApp.state; const c = MazeApp.config; const wrapper = MazeApp.dom.containers.mazeWrapper; const availableWidth = wrapper.clientWidth; const availableHeight = wrapper.clientHeight; if (availableWidth === 0 || availableHeight === 0) { return false; } s.mazeDimensions.rows = rows; s.mazeDimensions.cols = cols; s.mazeDimensions.cellSize = Math.floor(Math.min(availableWidth / s.mazeDimensions.cols, availableHeight / s.mazeDimensions.rows)); const mazePixelWidth = s.mazeDimensions.cols * s.mazeDimensions.cellSize; const mazePixelHeight = s.mazeDimensions.rows * s.mazeDimensions.cellSize; const gridTemplate = `repeat(${s.mazeDimensions.rows}, 1fr) / repeat(${s.mazeDimensions.cols}, 1fr)`; wrapper.innerHTML = `<div id="maze-container" style="width:${mazePixelWidth}px; height:${mazePixelHeight}px; grid-template:${gridTemplate};"></div><div id="entity-container" style="width:${mazePixelWidth}px; height:${mazePixelHeight}px; grid-template:${gridTemplate};"></div>`; MazeApp.dom.entityContainer = wrapper.querySelector('#entity-container'); const mazeContainer = wrapper.querySelector('#maze-container'); const firewallConfig = MazeApp.core.getCurrentWorldData().firewall; s.currentMazeLayout.forEach((row, r_idx) => { row.forEach((cellType, c_idx) => { const cellDiv = document.createElement('div'); cellDiv.className = 'maze-cell'; if (cellType === 1) cellDiv.classList.add('wall'); if (cellType === 2) { const firewallBlock = document.createElement('div'); firewallBlock.className = 'firewall-block'; cellDiv.appendChild(firewallBlock); const cycle = firewallConfig.cycle; s.firewalls.push({ r: r_idx, c: c_idx, element: firewallBlock, state: 'closed', cycle: [cycle[0] * 1000, cycle[1] * 1000], changeAt: Date.now() + (Math.random() * cycle[0] * 1000) }); } mazeContainer.appendChild(cellDiv); }); }); return true; },
+                placeEntities() { const s = MazeApp.state; const d = MazeApp.dom; if (!d.entityContainer) return false; const pathCells = []; s.currentMazeLayout.forEach((row, r_idx) => row.forEach((cell, c_idx) => { if (cell === 0) pathCells.push({row: r_idx, col: c_idx}) })); pathCells.sort(() => 0.5 - Math.random()); const { word } = MazeApp.core.getCurrentPhaseData(); if (pathCells.length < word.length + 2) { return false; } s.playerPosition = pathCells.pop(); s.exitPosition = pathCells.pop(); d.entityContainer.innerHTML = '<div id="player"></div><div id="exit-door"></div>'; d.player = d.entityContainer.querySelector('#player'); d.exitDoor = d.entityContainer.querySelector('#exit-door'); s.nextLetterIndex = 0; s.allLettersCollected = false; s.lettersToCollect = word.split('').map((char, index) => { const pos = pathCells.pop(); if (!pos) return null; const letterDiv = document.createElement('div'); letterDiv.className = `letter ${index > 0 ? MazeApp.config.CSS_CLASSES.INACTIVE : MazeApp.config.CSS_CLASSES.TARGET}`; letterDiv.textContent = char; d.entityContainer.appendChild(letterDiv); return { char, row: pos.row, col: pos.col, collected: false, element: letterDiv }; }).filter(Boolean); this.updateAllEntityPositions(); return true; },
+                updateAllEntityPositions() { const { cellSize } = MazeApp.state.mazeDimensions; const d = MazeApp.dom; if(cellSize === 0 || !d.player) return; d.player.style.width = `${cellSize * 0.7}px`; d.player.style.height = `${cellSize * 0.7}px`; d.player.style.gridRowStart = MazeApp.state.playerPosition.row + 1; d.player.style.gridColumnStart = MazeApp.state.playerPosition.col + 1; if(d.exitDoor){ d.exitDoor.style.width = `${cellSize * 0.8}px`; d.exitDoor.style.height = `${cellSize * 0.8}px`; d.exitDoor.style.gridRowStart = MazeApp.state.exitPosition.row + 1; d.exitDoor.style.gridColumnStart = MazeApp.state.exitPosition.col + 1; } MazeApp.state.lettersToCollect.forEach(letter => { if (letter.element) { const letterSize = cellSize * 0.8; letter.element.style.width = `${letterSize}px`; letter.element.style.height = `${letterSize}px`; letter.element.style.fontSize = `${letterSize * 0.7}px`; letter.element.style.borderRadius = `${letterSize * 0.15}px`; letter.element.style.gridRowStart = letter.row + 1; letter.element.style.gridColumnStart = letter.col + 1; } }); },
+                movePlayer(direction) { if (MazeApp.state.isPlayerStunned || MazeApp.state.isPaused) return; const s = MazeApp.state; const d = MazeApp.dom; const moveMap = { up: { dr: -1, dc: 0 }, down: { dr: 1, dc: 0 }, left: { dr: 0, dc: -1 }, right: { dr: 0, dc: 1 } }; const move = moveMap[direction]; if (!move) return; let { row, col } = { ...s.playerPosition }; row += move.dr; col += move.dc; const targetCellType = s.currentMazeLayout[row] ? s.currentMazeLayout[row][col] : 1; let canMove = false; switch(targetCellType) { case 0: canMove = true; break; case 2: const firewall = s.firewalls.find(fw => fw.r === row && fw.c === col); if(firewall && firewall.state === 'open') canMove = true; break; } if (canMove) { const oldPos = { ...s.playerPosition }; s.playerPosition = { row, col }; d.player.style.gridRowStart = row + 1; d.player.style.gridColumnStart = col + 1; const trail = document.createElement('div'); trail.className = 'trail-particle'; const cellSize = s.mazeDimensions.cellSize; trail.style.width = `${cellSize * 0.25}px`; trail.style.height = `${cellSize * 0.25}px`; trail.style.gridRowStart = oldPos.row + 1; trail.style.gridColumnStart = oldPos.col + 1; d.entityContainer.appendChild(trail); setTimeout(() => trail.remove(), parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--trail-duration')) * 1000); this.checkCollision(); } else { MazeApp.core.handleImpact(); } },
+                checkCollision() { const s = MazeApp.state; const CSS = MazeApp.config.CSS_CLASSES; const nextLetter = s.lettersToCollect[s.nextLetterIndex]; if (nextLetter && !nextLetter.collected && nextLetter.row === s.playerPosition.row && nextLetter.col === s.playerPosition.col) { MazeApp.ui.animateLetterCollection(nextLetter.element); nextLetter.collected = true; s.nextLetterIndex++; const newNextLetter = s.lettersToCollect[s.nextLetterIndex]; if (newNextLetter) { newNextLetter.element.classList.remove(CSS.INACTIVE); newNextLetter.element.classList.add(CSS.TARGET); } else { s.allLettersCollected = true; if(MazeApp.dom.exitDoor) MazeApp.dom.exitDoor.classList.add(CSS.ACTIVE); } MazeApp.ui.updateGameUI(); } if (s.allLettersCollected && s.playerPosition.row === s.exitPosition.row && s.playerPosition.col === s.exitPosition.col) { MazeApp.core.startChallenge(); } }
             },
             core: {
                 init() {
                     const dom = MazeApp.dom;
-                    dom.screens = { preloader: document.getElementById('preloader-screen'), welcome: document.getElementById('welcome-screen'), name: document.getElementById('name-screen'), map: document.getElementById('map-screen'), levelMap: document.getElementById('level-map-screen'), highscore: document.getElementById('highscore-screen'), game: document.getElementById('game-screen'), challenge: document.getElementById('challenge-screen'), results: document.getElementById('results-screen'), victory: document.getElementById('victory-screen'), phaseTransition: document.getElementById('phase-transition-screen') };
-                    dom.buttons = { enter: document.getElementById('enter-button'), resetButton: document.getElementById('reset-button'), nextLevel: document.getElementById('next-level-button'), dPadToggle: document.getElementById('d-pad-toggle'), levelMapBack: document.getElementById('level-map-back-button'), pause: document.getElementById('pause-button'), resume: document.getElementById('resume-button'), exitToMap: document.getElementById('exit-to-map-button'), highscore: document.getElementById('highscore-button'), highscoreBack: document.getElementById('highscore-back-button'), resultsContinue: document.getElementById('results-continue-button'), memoryPulse: document.getElementById('memory-pulse-button')};
+                    dom.screens = { preloader: document.getElementById('preloader-screen'), welcome: document.getElementById('welcome-screen'), profileSelector: document.getElementById('profile-selector-screen'), name: document.getElementById('name-screen'), map: document.getElementById('map-screen'), levelMap: document.getElementById('level-map-screen'), highscore: document.getElementById('highscore-screen'), game: document.getElementById('game-screen'), challenge: document.getElementById('challenge-screen'), results: document.getElementById('results-screen'), victory: document.getElementById('victory-screen'), phaseTransition: document.getElementById('phase-transition-screen') };
+                    dom.buttons = { enter: document.getElementById('enter-button'), resetButton: document.getElementById('reset-button'), shutdown: document.getElementById('shutdown-button'), nextLevel: document.getElementById('next-level-button'), levelMapBack: document.getElementById('level-map-back-button'), pause: document.getElementById('pause-button'), resume: document.getElementById('resume-button'), exitToMap: document.getElementById('exit-to-map-button'), highscore: document.getElementById('highscore-button'), highscoreBack: document.getElementById('highscore-back-button'), resultsContinue: document.getElementById('results-continue-button'), memoryPulse: document.getElementById('memory-pulse-button'), mapChangeOperative: document.getElementById('map-change-operative-button')};
                     dom.displays = { levelMapHeader: document.getElementById('level-map-header'), hudIcon: document.getElementById('hud-world-icon'), hudTextInfo: document.getElementById('hud-text-info'), wordDisplay: document.getElementById('word-display-container'), challenge: document.getElementById('challenge-display'), challengeBlueprint: document.getElementById('challenge-blueprint'), countdownNumber: document.getElementById('countdown-number'), resultsTime: document.getElementById('results-time'), resultsImpacts: document.getElementById('results-impacts'), resultsPulses: document.getElementById('results-pulses'), resultsScore: document.getElementById('results-score') };
-                    dom.containers = { cliOutput: document.getElementById('cli-output'), nameDisplay: document.getElementById('name-display-container'), nameKeyboard: document.getElementById('name-keyboard-container'), worldMap: document.getElementById('world-map-container'), levelMap: document.getElementById('level-map-container'), highscore: document.getElementById('highscore-container'), challengeKeyboard: document.getElementById('challenge-keyboard-container'), mazeWrapper: document.getElementById('maze-wrapper'), dPad: document.getElementById('d-pad-container') };
-                    dom.overlays = { impact: document.getElementById('impact-overlay'), countdown: document.getElementById('countdown-overlay'), pause: document.getElementById('pause-overlay') };
-                    this.loadState();
-                    if (MazeApp.state.playerName) { dom.buttons.enter.textContent = "Continuar"; }
-                    this.setupEventListeners();
-                    this.runBootSequence();
+                    dom.containers = { cliOutput: document.getElementById('cli-output'), profileGrid: document.getElementById('profile-grid'), nameDisplay: document.getElementById('name-display-container'), nameKeyboard: document.getElementById('name-keyboard-container'), worldMap: document.getElementById('world-map-container'), levelMap: document.getElementById('level-map-container'), highscore: document.getElementById('highscore-container'), challengeKeyboard: document.getElementById('challenge-keyboard-container'), mazeWrapper: document.getElementById('maze-wrapper'), dPad: document.getElementById('d-pad-container'), gameUIRightControls: document.getElementById('game-ui-right-controls') };
+                    dom.overlays = { impact: document.getElementById('impact-overlay'), countdown: document.getElementById('countdown-overlay'), pause: document.getElementById('pause-overlay'), shutdown: document.getElementById('shutdown-overlay'), corruption: document.getElementById('corruption-overlay') }; 
+                    this.loadProfiles(); 
+                    this.setupEventListeners(); 
+                    this.runBootSequence(); 
                 },
-                setupEventListeners() {
-                    const c = MazeApp.core; const d = MazeApp.dom; const ui = MazeApp.ui;
-                    d.buttons.enter.addEventListener('click', c.handleEnterPress);
-                    d.buttons.resetButton.addEventListener('click', c.resetGame);
-                    d.buttons.nextLevel.addEventListener('click', () => { c.advanceLevel(); c.showWorldMap(); });
-                    d.buttons.levelMapBack.addEventListener('click', c.showWorldMap);
-                    d.buttons.dPadToggle.addEventListener('click', c.toggleDPad);
-                    d.buttons.pause.addEventListener('click', c.togglePause);
-                    d.buttons.resume.addEventListener('click', c.togglePause);
-                    d.buttons.exitToMap.addEventListener('click', () => { c.togglePause(); c.showWorldMap(); });
-                    d.buttons.highscore.addEventListener('click', c.showHighScores);
-                    d.buttons.highscoreBack.addEventListener('click', c.showWorldMap);
-                    d.buttons.resultsContinue.addEventListener('click', () => { ui.showScreen('victory'); });
-                    d.buttons.memoryPulse.addEventListener('click', c.triggerMemoryPulse);
-                    d.containers.dPad.addEventListener('click', (e) => { const button = e.target.closest('.d-pad-button'); if (button) { const direction = button.id.replace('d-pad-', ''); MazeApp.maze.movePlayer(direction); } });
-                    window.addEventListener('keydown', (e) => { 
-                        if (e.key === 'Escape' && !d.screens.game.classList.contains('hidden')) { c.togglePause(); }
-                        if (d.screens.game.classList.contains('hidden') && d.screens.challenge.classList.contains('hidden')) return;
-                        if (d.screens.game.classList.contains('hidden')) {return;} 
-                        const keyMap = {w:'up', s:'down', a:'left', d:'right', ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'}; 
-                        if (keyMap[e.key]) { e.preventDefault(); MazeApp.maze.movePlayer(keyMap[e.key]); } 
-                    });
-                    window.addEventListener('resize', () => { if (!d.screens.game.classList.contains('hidden')) { c.startGame(false); } });
-                },
-                runBootSequence() {
-                    const ui = MazeApp.ui; ui.showScreen('preloader');
-                    const bootLines = ['INITIATING DATASTREAM...', 'LOADING CORE MODULES...', 'CALIBRATING LOGIC GATES...', 'FINALIZING AESTHETICS...', '\nBOOT SEQUENCE COMPLETE.'];
-                    let lineIndex = 0; MazeApp.dom.containers.cliOutput.innerHTML = '<span class="cursor"></span>';
-                    const nextLine = () => {
-                        const cursor = MazeApp.dom.containers.cliOutput.querySelector('.cursor');
-                        if (lineIndex < bootLines.length) { if(cursor) cursor.insertAdjacentText('beforebegin', bootLines[lineIndex] + '\n'); lineIndex++; setTimeout(nextLine, 150);
-                        } else { if(cursor) { cursor.insertAdjacentText('beforebegin', 'ALL SYSTEMS READY. [ OK ]'); cursor.remove(); } setTimeout(() => ui.showScreen('welcome'), 800); }
-                    }; nextLine();
-                },
-                saveState() { try { const dataToSave = { playerName: MazeApp.state.playerName, progress: MazeApp.state.progress }; localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave)); } catch (e) { console.error("Error saving state:", e); } },
-                loadState() { try { const savedData = localStorage.getItem(STORAGE_KEY); if (savedData) { const parsedData = JSON.parse(savedData); if (parsedData.playerName && parsedData.progress) { MazeApp.state.playerName = parsedData.playerName; MazeApp.state.progress = parsedData.progress; } } } catch (e) { console.error("Error loading state:", e); localStorage.removeItem(STORAGE_KEY); } },
-                resetGame() { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(HIGHSCORE_KEY); window.location.reload(); },
-                handleEnterPress() {
-                    const core = MazeApp.core; const state = MazeApp.state;
-                    document.documentElement.requestFullscreen().catch(err => { console.warn(`Fullscreen request failed: ${err.message}. Proceeding without it.`); });
-                    if (state.playerName) { core.showWorldMap(); } else { core.transitionToNameScreen(); }
-                },
-                showWorldMap() { MazeApp.ui.renderWorldMap(); MazeApp.ui.showScreen('map'); },
-                showLevelMap(worldIdx) { MazeApp.ui.renderLevelMap(worldIdx); MazeApp.ui.showScreen('levelMap'); },
-                showHighScores() { MazeApp.ui.renderHighScores(); MazeApp.ui.showScreen('highscore'); },
-                togglePause() {
-                    MazeApp.state.isPaused = !MazeApp.state.isPaused;
-                    MazeApp.dom.overlays.pause.classList.toggle('hidden', !MazeApp.state.isPaused);
-                },
-                selectLevel(worldIdx, levelIdx) {
-                    const s = MazeApp.state;
-                    s.currentLevel.worldIdx = worldIdx;
-                    s.currentLevel.levelIdx = levelIdx;
-                    s.currentLevel.phase = 0;
-                    this.startGame(true);
-                },
-                startGame(isNewLevel) {
-                    const s = MazeApp.state; const m = MazeApp.maze; const ui = MazeApp.ui; const core = MazeApp.core;
-                    s.impact.count = 0; clearTimeout(s.impact.timer); s.isPlayerStunned = false; s.isPaused = false;
-                    
-                    if (isNewLevel) { s.currentLevel.impacts = 0; s.currentLevel.pulses = 0; s.currentLevel.startTime = Date.now(); }
-
-                    if (s.currentLevel.phase === 0) {
-                        const levelData = core.getCurrentLevelData();
-                        const setIndex = Math.floor(Math.random() * levelData.phaseSets.length);
-                        s.currentLevel.phaseSet = levelData.phaseSets[setIndex];
-                    }
-                    
-                    ui.showScreen('game'); ui.updateGameUI(); s.isDPadVisible = false; ui.updateDPadVisibility();
-                    
-                    const { worldData } = core.getCurrentPhaseData(); 
-                    m.generate(worldData.mazeSize[0], worldData.mazeSize[1]);
-                    if (!m.render() || !m.placeEntities()) { console.error("FATAL: Could not render/place entities. Retrying."); s.currentLevel.phase = 0; setTimeout(() => core.startGame(true), 100); }
-                },
+                setupEventListeners() { const c = MazeApp.core; const d = MazeApp.dom; d.buttons.enter.addEventListener('click', c.showProfileSelector); d.buttons.resetButton.addEventListener('click', c.resetAllData); d.buttons.shutdown.addEventListener('click', c.initiateShutdown); d.buttons.nextLevel.addEventListener('click', () => { c.advanceLevel(); c.showWorldMap(); }); d.buttons.levelMapBack.addEventListener('click', c.showWorldMap); d.buttons.mapChangeOperative.addEventListener('click', c.showProfileSelector); d.containers.gameUIRightControls.querySelector('#d-pad-toggle').addEventListener('click', c.toggleDPad); d.buttons.pause.addEventListener('click', c.togglePause); d.buttons.resume.addEventListener('click', c.togglePause); d.buttons.exitToMap.addEventListener('click', () => { c.togglePause(true); c.showProfileSelector(); }); d.buttons.highscore.addEventListener('click', c.showHighScores); d.buttons.highscoreBack.addEventListener('click', c.showProfileSelector); d.buttons.resultsContinue.addEventListener('click', () => { MazeApp.ui.showScreen('victory'); }); d.buttons.memoryPulse.addEventListener('click', c.triggerMemoryPulse); d.containers.dPad.addEventListener('click', (e) => { const button = e.target.closest('.d-pad-button'); if (button) { const direction = button.id.replace('d-pad-', ''); MazeApp.maze.movePlayer(direction); } }); window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !d.screens.game.classList.contains(MazeApp.config.CSS_CLASSES.HIDDEN)) { c.togglePause(); } if (d.screens.game.classList.contains(MazeApp.config.CSS_CLASSES.HIDDEN) && d.screens.challenge.classList.contains(MazeApp.config.CSS_CLASSES.HIDDEN)) return; if (d.screens.game.classList.contains(MazeApp.config.CSS_CLASSES.HIDDEN)) {return;} const keyMap = {w:'up', s:'down', a:'left', d:'right', ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'}; let moveDirection = keyMap[e.key]; if (!moveDirection) { moveDirection = keyMap[e.key.toLowerCase()]; } if (moveDirection) { e.preventDefault(); MazeApp.maze.movePlayer(moveDirection); } }); window.addEventListener('resize', () => { if (!d.screens.game.classList.contains(MazeApp.config.CSS_CLASSES.HIDDEN)) { c.startGame(false); } }); },
+                runBootSequence() { const ui = MazeApp.ui; ui.showScreen('preloader'); const bootLines = ['INITIATING DATASTREAM...', 'LOADING FIREWALL CORE...', 'CALIBRATING DYNAMIC LOGIC...', 'FINALIZING AESTHETICS v29.4...', '\nBOOT SEQUENCE COMPLETE.']; let lineIndex = 0; MazeApp.dom.containers.cliOutput.innerHTML = '<span class="cursor"></span>'; const nextLine = () => { const cursor = MazeApp.dom.containers.cliOutput.querySelector('.cursor'); if (lineIndex < bootLines.length) { if(cursor) cursor.insertAdjacentText('beforebegin', bootLines[lineIndex] + '\n'); lineIndex++; setTimeout(nextLine, 250); } else { if(cursor) { cursor.insertAdjacentText('beforebegin', 'ALL SYSTEMS READY. [ OK ]'); cursor.remove(); } setTimeout(() => ui.showScreen('welcome'), 800); } }; setTimeout(nextLine, 500); },
+                saveProfiles() { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(MazeApp.state.profiles)); } catch (e) { console.error("Error saving profiles:", e); } },
+                loadProfiles() { try { const savedData = localStorage.getItem(PROFILES_KEY); if (savedData) { MazeApp.state.profiles = JSON.parse(savedData); } } catch (e) { console.error("Error loading profiles:", e); MazeApp.state.profiles = []; localStorage.removeItem(PROFILES_KEY); } },
+                deleteProfile(playerName) { if (confirm(`¿Está seguro de que desea eliminar permanentemente al operativo '${playerName}'? Esta acción es irreversible.`)) { MazeApp.state.profiles = MazeApp.state.profiles.filter(p => p.playerName !== playerName); this.saveProfiles(); MazeApp.ui.renderProfileSelector(); } },
+                resetAllData() { if (confirm("¿Estás seguro? Se borrarán TODOS los perfiles y puntuaciones. Esta acción es irreversible.")) { localStorage.removeItem(PROFILES_KEY); localStorage.removeItem(HIGHSCORE_KEY); window.location.reload(); } },
+                initiateShutdown() { MazeApp.dom.overlays.shutdown.classList.add('active'); setTimeout(() => window.close(), 300); },
+                showProfileSelector() { document.documentElement.requestFullscreen().catch(err => { console.warn(`Fullscreen request failed: ${err.message}. Proceeding without it.`); }); MazeApp.ui.showScreen('profileSelector'); MazeApp.ui.renderProfileSelector(); },
+                selectProfile(playerName) { const s = MazeApp.state; const profile = s.profiles.find(p => p.playerName === playerName); if(profile) { s.activeProfileName = profile.playerName; s.progress = profile.progress; this.showWorldMap(); } },
+                showWorldMap() { const ui = MazeApp.ui; const core = MazeApp.core; clearInterval(MazeApp.state.ticker); MazeApp.state.ticker = null; ui.showScreen('map'); core.applyWorldTheme(MazeApp.state.progress.world); ui.renderWorldMap(); },
+                showLevelMap(worldIdx) { const ui = MazeApp.ui; const core = MazeApp.core; ui.showScreen('levelMap'); core.applyWorldTheme(worldIdx); ui.renderLevelMap(worldIdx); },
+                showHighScores() { const ui = MazeApp.ui; ui.showScreen('highscore'); ui.renderHighScores(); },
+                togglePause(isExiting = false) { const s = MazeApp.state; const c = MazeApp.config; s.isPaused = !s.isPaused; MazeApp.dom.overlays.pause.classList.toggle(c.CSS_CLASSES.HIDDEN, !s.isPaused); if (s.isPaused) { clearInterval(s.ticker); s.ticker = null; } else if (!isExiting) { s.ticker = setInterval(this.tick, c.TICK_INTERVAL); } },
+                tick() { const s = MazeApp.state; const now = Date.now(); s.firewalls.forEach(fw => { if (now > fw.changeAt) { fw.state = (fw.state === 'open' ? 'closed' : 'open'); const duration = (fw.state === 'open' ? fw.cycle[1] : fw.cycle[0]); fw.changeAt = now + duration; fw.element.classList.toggle(MazeApp.config.CSS_CLASSES.CLOSED, fw.state === 'closed'); } }); },
+                selectLevel(worldIdx, levelIdx) { const s = MazeApp.state; s.currentLevel.worldIdx = worldIdx; s.currentLevel.levelIdx = levelIdx; s.currentLevel.phase = 0; this.startGame(true); },
+                applyWorldTheme(worldIdx) { const theme = MazeApp.config.WORLDS_DATA[worldIdx]?.theme; if (!theme) { console.warn(`No theme found for world index: ${worldIdx}`); return; } for (const [key, value] of Object.entries(theme)) { document.documentElement.style.setProperty(key, value); } },
+                startGame(isNewLevel) { const s = MazeApp.state; const m = MazeApp.maze; const ui = MazeApp.ui; const core = MazeApp.core; const c = MazeApp.config; s.impact.count = 0; clearTimeout(s.impact.timer); s.isPlayerStunned = false; s.isPaused = false; clearInterval(s.ticker); s.ticker = setInterval(core.tick, c.TICK_INTERVAL); if (isNewLevel) { s.currentLevel.impacts = 0; s.currentLevel.pulses = 0; s.currentLevel.startTime = Date.now(); s.currentLevel.phase = 0; const levelData = core.getCurrentLevelData(); const arsenal = levelData.wordArsenal; const difficultyTiers = Object.keys(arsenal).sort((a,b) => a - b); s.currentLevel.currentPhaseSequence = difficultyTiers.map(tier => { const wordsInTier = arsenal[tier]; return wordsInTier[Math.floor(Math.random() * wordsInTier.length)]; }); } core.applyWorldTheme(s.currentLevel.worldIdx); ui.showScreen('game'); ui.updateGameUI(); s.isDPadVisible = false; ui.updateDPadVisibility(); const worldData = core.getCurrentWorldData(); const { mazeSizeRange } = worldData; const phaseCount = s.currentLevel.currentPhaseSequence.length; const progress = (phaseCount > 1) ? s.currentLevel.phase / (phaseCount - 1) : 0; let rows = Math.round(mazeSizeRange.rows[0] + progress * (mazeSizeRange.rows[1] - mazeSizeRange.rows[0])); let cols = Math.round(mazeSizeRange.cols[0] + progress * (mazeSizeRange.cols[1] - mazeSizeRange.cols[0])); if (rows % 2 === 0) rows++; if (cols % 2 === 0) cols++; m.generate(rows, cols); if (!m.render(rows, cols) || !m.placeEntities()) { console.error("FATAL: Could not render/place entities. Retrying."); s.currentLevel.phase = 0; setTimeout(() => core.startGame(true), 100); } },
                 getCurrentWorldData() { return MazeApp.config.WORLDS_DATA[MazeApp.state.currentLevel.worldIdx]; },
                 getCurrentLevelData() { const worldData = this.getCurrentWorldData(); return worldData.levels[MazeApp.state.currentLevel.levelIdx]; },
-                getCurrentPhaseData() {
-                    const cl = MazeApp.state.currentLevel;
-                    const worldData = this.getCurrentWorldData();
-                    const levelData = this.getCurrentLevelData();
-                    const word = cl.phaseSet[cl.phase];
-                    return { worldData, levelData, word }; 
-                },
+                getCurrentPhaseData() { const cl = MazeApp.state.currentLevel; const worldData = this.getCurrentWorldData(); const levelData = this.getCurrentLevelData(); const word = cl.currentPhaseSequence[cl.phase]; return { worldData, levelData, word }; },
                 advancePhase() { MazeApp.state.currentLevel.phase++; },
-                advanceLevel() {
-                    const p = MazeApp.state.progress; const c = MazeApp.config;
-                    if(p.world === MazeApp.state.currentLevel.worldIdx && p.level === MazeApp.state.currentLevel.levelIdx) {
-                        p.level++;
-                        const world = c.WORLDS_DATA[p.world];
-                        if (p.level >= world.levels.length) {
-                            p.level = 0; p.world++;
-                            if (p.world >= c.WORLDS_DATA.length) { p.world = 0; p.level=0; }
-                        }
-                        this.saveState();
-                    }
-                },
-                startChallenge() {
-                    const { word } = MazeApp.core.getCurrentPhaseData(); 
-                    const d = MazeApp.dom; const ui = MazeApp.ui; const c = MazeApp.core;
-                    ui.showScreen('challenge'); 
-                    d.displays.challengeBlueprint.textContent = word;
-                    ui.createVirtualKeyboard(d.containers.challengeKeyboard, MazeApp.config.CHALLENGE_KEYBOARD_LAYOUT, c.handleChallengeInput); 
-                    const activeKeys = [...new Set(word.split('')), 'BACKSPACE', 'ENTER']; 
-                    d.containers.challengeKeyboard.querySelectorAll('.key').forEach(key => { if (!activeKeys.includes(key.dataset.key)) { key.classList.add('disabled'); } }); 
-                    d.displays.challenge.textContent = ''; 
-                },
-                handleChallengeInput(key) {
-                    const c = MazeApp.core; const ui = MazeApp.ui; const d = MazeApp.dom; const s = MazeApp.state;
-                    let currentText = d.displays.challenge.textContent;
-                    const { word } = c.getCurrentPhaseData(); 
-                    if (key === 'BACKSPACE') { currentText = currentText.slice(0, -1); } 
-                    else if (key === 'ENTER') { 
-                        if (currentText === word) {
-                            if (s.currentLevel.phase < s.currentLevel.phaseSet.length - 1) {
-                                const ts = d.screens.phaseTransition;
-                                ts.querySelector('h1').textContent = `FASE ${s.currentLevel.phase + 1} COMPLETADA`;
-                                ui.showScreen('phaseTransition');
-                                setTimeout(() => { c.advancePhase(); c.startGame(false); }, 1500);
-                            } else {
-                                c.showResults();
-                            }
-                        } else { 
-                            const display = d.displays.challenge; 
-                            display.style.borderColor = 'var(--color-danger-accent)'; 
-                            setTimeout(() => display.style.borderColor = 'var(--color-primary-accent)', 500); 
-                        } 
-                    } else if (currentText.length < word.length) { currentText += key; } 
-                    d.displays.challenge.textContent = currentText; 
-                },
-                showResults() {
-                    const s = MazeApp.state; const d = MazeApp.dom.displays;
-                    const timeTaken = Math.floor((Date.now() - s.currentLevel.startTime) / 1000);
-                    const minutes = Math.floor(timeTaken / 60);
-                    const seconds = timeTaken % 60;
-                    const score = Math.max(0, 10000 - (timeTaken * 10) - (s.currentLevel.impacts * 100) - (s.currentLevel.pulses * 500));
-
-                    d.resultsTime.textContent = `Tiempo: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                    d.resultsImpacts.textContent = `Impactos: ${s.currentLevel.impacts}`;
-                    d.resultsPulses.textContent = `Pulsos de Memoria: ${s.currentLevel.pulses}`;
-                    d.resultsScore.textContent = `Puntuación: ${score}`;
-                    
-                    this.addHighScore(score);
-                    MazeApp.ui.showScreen('results');
-                },
+                advanceLevel() { const p = MazeApp.state.progress; const c = MazeApp.config; const activeProfile = MazeApp.state.profiles.find(prof => prof.playerName === MazeApp.state.activeProfileName); if (activeProfile && p.world === MazeApp.state.currentLevel.worldIdx && p.level === MazeApp.state.currentLevel.levelIdx) { p.level++; const world = c.WORLDS_DATA[p.world]; if (p.level >= world.levels.length) { p.level = 0; p.world++; if (p.world >= c.WORLDS_DATA.length) { p.world = 0; p.level=0; } } activeProfile.progress = p; this.saveProfiles(); } },
+                startChallenge() { const { word } = MazeApp.core.getCurrentPhaseData(); const d = MazeApp.dom; const ui = MazeApp.ui; const c = MazeApp.core; clearInterval(MazeApp.state.ticker); MazeApp.state.ticker = null; ui.showScreen('challenge'); d.displays.challengeBlueprint.textContent = word; ui.createVirtualKeyboard(d.containers.challengeKeyboard, MazeApp.config.CHALLENGE_KEYBOARD_LAYOUT, c.handleChallengeInput); const activeKeys = [...new Set(word.split('')), 'BACKSPACE', 'ENTER']; d.containers.challengeKeyboard.querySelectorAll('.key').forEach(key => { if (!activeKeys.includes(key.dataset.key)) { key.classList.add('disabled'); } }); d.displays.challenge.textContent = ''; },
+                handleChallengeInput(key) { const c = MazeApp.core; const ui = MazeApp.ui; const d = MazeApp.dom; const s = MazeApp.state; let currentText = d.displays.challenge.textContent; const { word } = c.getCurrentPhaseData(); if (key === 'BACKSPACE') { currentText = currentText.slice(0, -1); } else if (key === 'ENTER') { if (currentText === word) { if (s.currentLevel.phase < s.currentLevel.currentPhaseSequence.length - 1) { const ts = d.screens.phaseTransition; ts.querySelector('h1').textContent = `FASE ${s.currentLevel.phase + 1} COMPLETADA`; ui.showScreen('phaseTransition'); setTimeout(() => { c.advancePhase(); c.startGame(false); }, 1500); } else { c.showResults(); } } else { const display = d.displays.challenge; display.style.borderColor = 'var(--color-danger-accent)'; setTimeout(() => display.style.borderColor = 'var(--color-primary-accent)', 500); } } else if (currentText.length < word.length) { currentText += key; } d.displays.challenge.textContent = currentText; },
+                showResults() { const s = MazeApp.state; const d = MazeApp.dom.displays; const timeTaken = Math.floor((Date.now() - s.currentLevel.startTime) / 1000); const minutes = Math.floor(timeTaken / 60); const seconds = timeTaken % 60; const score = Math.max(0, 10000 - (timeTaken * 10) - (s.currentLevel.impacts * 100) - (s.currentLevel.pulses * 500)); d.resultsTime.textContent = `Tiempo: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`; d.resultsImpacts.textContent = `Impactos: ${s.currentLevel.impacts}`; d.resultsPulses.textContent = `Pulsos de Memoria: ${s.currentLevel.pulses}`; d.resultsScore.textContent = `Puntuación: ${score}`; this.addHighScore(score); MazeApp.ui.showScreen('results'); },
                 getHighScores() { try { return JSON.parse(localStorage.getItem(HIGHSCORE_KEY)) || []; } catch (e) { return []; } },
-                addHighScore(score) {
-                    const highScores = this.getHighScores();
-                    const newScore = { name: MazeApp.state.playerName, score };
-                    highScores.push(newScore);
-                    highScores.sort((a, b) => b.score - a.score);
-                    highScores.splice(10);
-                    try { localStorage.setItem(HIGHSCORE_KEY, JSON.stringify(highScores)); } catch (e) { console.error("Error saving high scores:", e); }
-                },
-                triggerMemoryPulse() {
-                    const blueprint = MazeApp.dom.displays.challengeBlueprint;
-                    blueprint.classList.remove('visible');
-                    void blueprint.offsetWidth; // Force reflow to restart animation
-                    blueprint.classList.add('visible');
-                    MazeApp.state.currentLevel.pulses++;
-                },
-                transitionToNameScreen() {
-                    const c = MazeApp.core; const ui = MazeApp.ui;
-                    ui.showScreen('name');
-                    ui.setupNameDisplay();
-                    ui.createVirtualKeyboard(MazeApp.dom.containers.nameKeyboard, MazeApp.config.NAME_KEYBOARD_LAYOUT, c.handleNameInput);
-                    ui.updateNameKeyboardAppearance();
-                },
-                handleNameInput(key) { 
-                    const s = MazeApp.state; const ui = MazeApp.ui; const c = MazeApp.core;
-                    if (key === 'SHIFT') { s.isShiftActive = !s.isShiftActive; ui.updateNameKeyboardAppearance(); return; } 
-                    if (key === 'BACKSPACE') { s.playerName = s.playerName.slice(0, -1); } 
-                    else if (key === 'ACEPTAR') { if (s.playerName.trim().length > 0) { c.saveState(); c.showWorldMap(); } return; } 
-                    else if (s.playerName.length < MazeApp.config.NAME_MAX_LENGTH) { let char = key; if (char === 'SPACE') char = ' '; else if (isNaN(char) && char !== '_' && char !== '@') { char = s.isShiftActive ? char.toUpperCase() : char.toLowerCase(); } s.playerName += char; } 
-                    ui.updateNameDisplay();
-                },
+                addHighScore(score) { const highScores = this.getHighScores(); const newScore = { name: MazeApp.state.activeProfileName, score }; highScores.push(newScore); highScores.sort((a, b) => b.score - a.score); highScores.splice(10); try { localStorage.setItem(HIGHSCORE_KEY, JSON.stringify(highScores)); } catch (e) { console.error("Error saving high scores:", e); } },
+                triggerMemoryPulse() { const blueprint = MazeApp.dom.displays.challengeBlueprint; const CSS = MazeApp.config.CSS_CLASSES; blueprint.classList.remove(CSS.VISIBLE); void blueprint.offsetWidth; blueprint.classList.add(CSS.VISIBLE); MazeApp.state.currentLevel.pulses++; },
+                transitionToNameScreen() { const c = MazeApp.core; const ui = MazeApp.ui; MazeApp.state.typedPlayerName = ''; ui.showScreen('name'); ui.setupNameDisplay(); ui.createVirtualKeyboard(MazeApp.dom.containers.nameKeyboard, MazeApp.config.NAME_KEYBOARD_LAYOUT, c.handleNameInput); ui.updateNameKeyboardAppearance(); },
+                handleNameInput(key) { const s = MazeApp.state; const ui = MazeApp.ui; const c = MazeApp.core; if (key === 'ACEPTAR') { const newName = s.typedPlayerName.trim(); if (newName.length === 0) return; if (s.profiles.some(p => p.playerName.toLowerCase() === newName.toLowerCase())) { MazeApp.dom.containers.nameDisplay.classList.add(MazeApp.config.CSS_CLASSES.NAME_ERROR); return; } const newProfile = { playerName: newName, progress: { world: 0, level: 0 } }; s.profiles.push(newProfile); s.activeProfileName = newName; s.progress = newProfile.progress; c.saveProfiles(); c.showWorldMap(); return; } if (key === 'SHIFT') { s.isShiftActive = !s.isShiftActive; ui.updateNameKeyboardAppearance(); return; } if (key === 'BACKSPACE') { s.typedPlayerName = s.typedPlayerName.slice(0, -1); } else if (s.typedPlayerName.length < MazeApp.config.NAME_MAX_LENGTH) { let char = key; if (isNaN(char) && char !== '_' && char !== '@') { char = s.isShiftActive ? char.toUpperCase() : char.toLowerCase(); } s.typedPlayerName += char; } ui.updateNameDisplay(); },
                 toggleDPad() { MazeApp.state.isDPadVisible = !MazeApp.state.isDPadVisible; MazeApp.ui.updateDPadVisibility(); },
-                handleImpact() {
-                    const s = MazeApp.state; const c = MazeApp.config; const d = MazeApp.dom;
-                    if(s.isPlayerStunned) return;
-                    s.currentLevel.impacts++;
-                    s.isPlayerStunned = true;
-                    clearTimeout(s.impact.timer);
-                    s.impact.count = Math.min(s.impact.count + 1, 3);
-                    
-                    const playerDiv = document.getElementById('player');
-                    playerDiv.className = playerDiv.className.replace(/impact-shake-\d/g, '').trim();
-                    void playerDiv.offsetWidth;
-                    playerDiv.classList.add(`impact-shake-${s.impact.count === 1 ? '1' : '2'}`);
-
-                    d.overlays.impact.className = `active-${s.impact.count}`;
-                    d.overlays.impact.addEventListener('animationend', () => d.overlays.impact.className = '', { once: true });
-
-                    const stunDuration = c.IMPACT_STUN_DURATIONS[s.impact.count];
-
-                    if (s.impact.count === 3) {
-                        d.overlays.countdown.classList.remove('hidden');
-                        let count = 3;
-                        const updateCountdown = () => {
-                            if(d.displays.countdownNumber) d.displays.countdownNumber.textContent = count;
-                            if(d.displays.countdownNumber) {
-                               d.displays.countdownNumber.style.animation = 'none';
-                               void d.displays.countdownNumber.offsetHeight;
-                               d.displays.countdownNumber.style.animation = 'countdown-pop 1s linear';
-                            }
-                            count--;
-                        };
-                        updateCountdown();
-                        const countdownInterval = setInterval(() => { if (count >= 0) updateCountdown(); }, 1000);
-                        
-                        setTimeout(() => {
-                            clearInterval(countdownInterval);
-                            d.overlays.countdown.classList.add('hidden');
-                            s.isPlayerStunned = false;
-                            s.impact.count = 0;
-                        }, stunDuration);
-                    } else {
-                        s.impact.timer = setTimeout(() => s.impact.count = 0, c.IMPACT_RESET_DELAY);
-                        setTimeout(() => s.isPlayerStunned = false, stunDuration);
-                    }
-                }
+                handleImpact() { const s = MazeApp.state; const c = MazeApp.config; const d = MazeApp.dom; const CSS = c.CSS_CLASSES; if(s.isPlayerStunned || !d.player) return; s.currentLevel.impacts++; s.isPlayerStunned = true; clearTimeout(s.impact.timer); s.impact.count = Math.min(s.impact.count + 1, 3); d.player.className = d.player.className.replace(/impact-shake-\d/g, '').trim(); void d.player.offsetWidth; d.player.classList.add(s.impact.count === 1 ? CSS.IMPACT_SHAKE_1 : CSS.IMPACT_SHAKE_2); d.overlays.impact.className = `active-${s.impact.count}`; d.overlays.impact.addEventListener('animationend', () => d.overlays.impact.className = '', { once: true }); d.overlays.corruption.className = `corruption-level-${s.impact.count}`; const stunDuration = c.IMPACT_STUN_DURATIONS[s.impact.count]; const resetCorruption = () => { s.impact.count = 0; d.overlays.corruption.className = ''; }; if (s.impact.count === 3) { d.overlays.countdown.classList.remove(CSS.HIDDEN); let count = 3; const updateCountdown = () => { if(d.displays.countdownNumber) { d.displays.countdownNumber.textContent = count; d.displays.countdownNumber.style.animation = 'none'; void d.displays.countdownNumber.offsetHeight; d.displays.countdownNumber.style.animation = 'countdown-pop 1s linear'; } count--; }; updateCountdown(); const countdownInterval = setInterval(() => { if (count >= 0) updateCountdown(); }, 1000); setTimeout(() => { clearInterval(countdownInterval); d.overlays.countdown.classList.add(CSS.HIDDEN); s.isPlayerStunned = false; resetCorruption(); }, stunDuration); } else { s.impact.timer = setTimeout(resetCorruption, c.IMPACT_RESET_DELAY); setTimeout(() => s.isPlayerStunned = false, stunDuration); } }
             }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            try { MazeApp.core.init(); } 
-            catch (e) { document.body.innerHTML = `<div style="color:red; background:black; font-family:monospace; padding:2em; height:100vh;">FATAL ERROR: ${e.message}<br><br>Stack: ${e.stack}</div>`; console.error(e); }
+            try {
+                MazeApp.core.init();
+            } 
+            catch (e) {
+                document.body.innerHTML = `<div style="color:red; background:black; font-family:monospace; padding:2em; height:100vh;">FATAL ERROR: ${e.message}<br><br>Stack: ${e.stack}</div>`;
+                console.error(e);
+            }
         });
     </script>
 </body>
